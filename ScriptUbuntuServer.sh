@@ -1,5 +1,9 @@
 #!/bin/bash
+sudo apt update
 
+sudo apt upgrade
+
+sudo ufw allow bind9
 # Solicitar el nombre del dominio
 read -p "Ingrese el nombre del dominio: " dominio
 
@@ -43,7 +47,14 @@ sudo bash -c "cat > /etc/bind/db.$dominio" <<EOF
 www     IN      A       $ip
 EOF
 
+
+sudo named-checkzone
+
+sudo named-checkzone "${dominio}" "/etc/bind/${dbFile}"
+
 # Reiniciar el servicio BIND para aplicar los cambios
 sudo systemctl restart bind9
+
+systemctl status bind9
 
 echo "Configuracion completada para el dominio $dominio con la IP $ip."
