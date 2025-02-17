@@ -17,7 +17,7 @@ network:
   version: 2
   renderer: networkd
   ethernets:
-    ensp0s3:
+    enp0s3:
       dhcp4: false
       addresses: [$ip/$subnet_mask]
 EOL
@@ -30,15 +30,15 @@ read -p "Ingresa el rango final de direcciones IP: " rango_final
 
 sudo tee /etc/dhcp/dhcpd.conf > /dev/null <<EOL
 subnet $subnet netmask 255.255.255.0 {
-  range $rango_inicial $rango_final;
+  range $rango_inicio $rango_final;
   option routers $ip;
   option subnet-mask 255.255.255.0;
 }
 EOL
 
-sudo systemctl restart isc-dhcp-server
+service isc-dhcp-server restart
 
-sudo systemctl status isc-dhcp-server
+service isc-dhcp-server status
 
 echo "Configuración del servidor DHCP completada."
 
