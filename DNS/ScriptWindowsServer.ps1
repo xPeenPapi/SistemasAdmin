@@ -1,3 +1,4 @@
+
 Install-WindowsFeautre -Name DNS
 Install-WindowsFeature -Name RSAT-DNS-Server
 $dominio = Read-Host "Introduce el nombre del dominio"
