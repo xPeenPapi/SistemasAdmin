@@ -8,14 +8,15 @@ sudo systemctl status vsftpd
 crear_usuario() {
     read -p "Ingrese el nombre de usuario: " username
     sudo useradd "$username"
-
     sudo mkdir /home/$username
     sudo chmod 700 /home/$username
     sudo chown $username:$username /home/$username
 
     sudo mkdir /home/$username/publica
-    sudo chmod 755 /home/$username/publica
+    sudo chmod 775 /home/$username/publica
     sudo mount --bind /home/FTP/publica /home/$username/publica
+
+
 
     sudo mkdir /home/$username/$username
     sudo chmod 700 /home/$username/$username
@@ -33,6 +34,12 @@ asignar_grupo() {
     read -p "Escriba el nombre de usuario a asignar a un grupo (reprobados o recursadores): " user
     read -p "Escriba el nombre del grupo a asignar: " grupo
     sudo adduser "$user" "$grupo"
+
+    sudo mkdir /home/$user/$grupo
+    sudo chmod 770 /home/$user/$grupo   
+    sudo mount --bind /home/FTP/$grupo /home/$user/$grupo
+ 
+
     echo "Usuario $user asignado al grupo $grupo."
 }
 
