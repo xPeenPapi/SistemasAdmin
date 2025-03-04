@@ -39,11 +39,11 @@ function validar_mascaraDecimal {
 }
 
 function validar_subred {
-    Param([Parameter(Mandatory)][string]$subred)
-    if ($subred -match '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.0$') {
+    Param([Parameter(Mandatory)][string]$subnetMask)
+    if ($subnetMask-match '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.0$') {
         return $true
     } else {
-        Write-Host "Error: La subred '$subred' no es válida. Debe terminar en 0."
+        Write-Host "Error: La subred '$subnetMask' no es válida. Debe terminar en 0."
         return $false
     }
 }
