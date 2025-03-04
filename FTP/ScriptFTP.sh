@@ -4,30 +4,32 @@ sudo apt-get install vsftpd
 sudo systemctl start vsftpd
 sudo systemctl enable vsftpd
 sudo systemctl status vsftpd
-#verificar ftp
-#verificar vsftpd
 
 crear_usuario() {
     read -p "Ingrese el nombre de usuario: " username
     sudo useradd "$username"
 
-    mkdir /home/$username
+    sudo mkdir /home/$username
     sudo chmod 700 /home/$username
     sudo chown $username:$username /home/$username
 
-    mkdir /home/$username/publica
+    sudo mkdir /home/$username/publica
     sudo chmod 755 /home/$username/publica
     sudo mount --bind /home/FTP/publica /home/$username/publica
 
-    mkdir /home/$username/$username
+    sudo mkdir /home/$username/$username
     sudo chmod 700 /home/$username/$username
     sudo chown $username:$username /home/$username/$username
 
-    echo "Usuario $username creado."
-    
+    read -sp "Ingrese la contraseña para $username: " password
+    echo
+    echo "$username:$password" | sudo chpasswd
+
+    echo "Usuario $username creado y contraseña asignada."
 }
 
 asignar_grupo() {
+    echo groups
     read -p "Escriba el nombre de usuario a asignar a un grupo (reprobados o recursadores): " user
     read -p "Escriba el nombre del grupo a asignar: " grupo
     sudo adduser "$user" "$grupo"
@@ -39,7 +41,7 @@ cambiar_grupo() {
     read -p "Escriba el nuevo grupo de ese usuario: " grupo
 
     grupo_actual=$(groups "$user" | awk '{print $5}')  # Asume que el grupo relevante es el tercero
-    echo $grupo_actual
+    echo groups
 
     if [[ "$grupo_actual" == "$grupo" ]]; then
         echo "El usuario $user ya está en el grupo $grupo. No se realizaron cambios."
@@ -72,18 +74,15 @@ while true; do
 
     case $opcion in
         1)
-            crear_grupo
-            ;;
-        2)
             crear_usuario
             ;;
-        3)
+        2)  
             asignar_grupo
             ;;
-        4)
+        3)
             cambiar_grupo
             ;;
-        5)
+        4)
             echo "Saliendo..."
             break
             ;;
@@ -92,5 +91,3 @@ while true; do
             ;;
     esac
 done
-
-
