@@ -1,5 +1,37 @@
 # Importar módulos necesarios
 Import-Module WebAdministration
+function Crear-SitioFTP {
+    param (
+        [string]$SitioFTPName = "SFTPSiteName",
+        [string]$FTPRootDir = "C:\FTP",
+        [int]$Puerto = 21
+    )
+
+    # Verificar si el sitio FTP ya existe
+    if (-not (Get-WebSite -Name $SitioFTPName -ErrorAction SilentlyContinue)) {
+        # Crear el sitio FTP
+        New-WebSite -Name $SitioFTPName -PhysicalPath $FTPRootDir -Port $Puerto -Force
+        Write-Host "Sitio FTP '$SitioFTPName' creado en '$FTPRootDir'."
+    } else {
+        Write-Host "El sitio FTP '$SitioFTPName' ya existe."
+    }
+}
+
+# Función para crear el grupo FTP
+function Crear-GrupoFTP {
+    param (
+        [string]$GrupoFTP = "SFTPUserGroupName"
+    )
+
+    # Verificar si el grupo ya existe
+    if (-not (Get-LocalGroup -Name $GrupoFTP -ErrorAction SilentlyContinue)) {
+        # Crear el grupo
+        New-LocalGroup -Name $GrupoFTP
+        Write-Host "Grupo '$GrupoFTP' creado."
+    } else {
+        Write-Host "El grupo '$GrupoFTP' ya existe."
+    }
+}
 
 # Función para configurar autenticación y autorización
 function Configurar-AutenticacionYAutorizacion {
@@ -83,6 +115,7 @@ function Configurar-PermisosNTFSyReiniciarFTP {
     Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
     Write-Host "Sitio FTP '$FTPSiteName' reiniciado."
 }
+
 
 # Función para verificar la instalación del FTP
 function verificar_instalacion {
@@ -250,10 +283,20 @@ function cambiar_grupo {
     Write-Host "Enlace simbólico de la carpeta de grupo actualizado."
 }
 
-# Configurar autenticación, políticas SSL y permisos NTFS
-Configurar-AutenticacionYAutorizacion
-Configurar-PoliticasSSL
-Configurar-PermisosNTFSyReiniciarFTP
+# Crear el sitio FTP si no existe
+Crear-SitioFTP -SitioFTPName "SFTPSiteName" -FTPRootDir "C:\FTP" -Puerto 21
+
+# Crear el grupo FTP si no existe
+Crear-GrupoFTP -GrupoFTP "SFTPUserGroupName"
+
+# Configurar autenticación y autorización
+Configurar-AutenticacionYAutorizacion -SitioFTPName "SFTPSiteName" -GrupoFTP "SFTPUserGroupName"
+
+# Configurar políticas SSL
+Configurar-PoliticasSSL -SitioFTPName "SFTPSiteName"
+
+# Configurar permisos NTFS y reiniciar el sitio FTP
+Configurar-PermisosNTFSyReiniciarFTP -FTPRootDir "C:\FTP" -FTPUserGroupName "SFTPUserGroupName" -FTPSiteName "SFTPSiteName"
 
 while ($true) {
     Write-Host "Seleccione una opción:"
