@@ -118,18 +118,29 @@ function crear_usuario {
         return
     }
 
+    # Validar que la contraseña no esté vacía
+    if ($password.Length -eq 0) {
+        Write-Host "La contraseña no puede estar vacía."
+        return
+    }
+
     # Crear el usuario si no existe
-    if (-not (Get-LocalUser -Name $username -ErrorAction SilentlyContinue)) {
-        New-LocalUser -Name $username -Password $password -FullName $username
+    try {
+        New-LocalUser -Name $username -Password $password -FullName $username -ErrorAction Stop
         Write-Host "Usuario '$username' creado."
-    } else {
-        Write-Host "El usuario '$username' ya existe."
+    } catch {
+        Write-Host "Error al crear el usuario '$username': $_"
         return
     }
 
     # Agregar el usuario al grupo
-    Add-LocalGroupMember -Group $grupo -Member $username
-    Write-Host "Usuario '$username' agregado al grupo '$grupo'."
+    try {
+        Add-LocalGroupMember -Group $grupo -Member $username -ErrorAction Stop
+        Write-Host "Usuario '$username' agregado al grupo '$grupo'."
+    } catch {
+        Write-Host "Error al agregar el usuario '$username' al grupo '$grupo': $_"
+        return
+    }
 
     # Crear carpetas personales y asignar permisos
     $UserHomeDir = "C:\FTP\LocalUser\$username"
@@ -137,22 +148,38 @@ function crear_usuario {
     $UserGroupDir = "$UserHomeDir\$grupo"
     $UserPersonalDir = "$UserHomeDir\$username"
 
-    New-Item -ItemType Directory -Path $UserHomeDir
-    New-Item -ItemType Directory -Path $UserPublicDir
-    New-Item -ItemType Directory -Path $UserGroupDir
-    New-Item -ItemType Directory -Path $UserPersonalDir
+    try {
+        # Crear carpetas compartidas si no existen
+        if (-not (Test-Path "C:\FTP\publica")) {
+            New-Item -ItemType Directory -Path "C:\FTP\publica" -ErrorAction Stop
+        }
+        if (-not (Test-Path "C:\FTP\reprobados")) {
+            New-Item -ItemType Directory -Path "C:\FTP\reprobados" -ErrorAction Stop
+        }
+        if (-not (Test-Path "C:\FTP\recursadores")) {
+            New-Item -ItemType Directory -Path "C:\FTP\recursadores" -ErrorAction Stop
+        }
 
-    # Asignar permisos exclusivos a la carpeta personal
-    $Acl = Get-Acl $UserPersonalDir
-    $Acl.SetAccessRuleProtection($true, $false)
-    $Acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("$username", "FullControl", "Allow")))
-    $Acl | Set-Acl $UserPersonalDir
+        # Crear carpetas personales
+        New-Item -ItemType Directory -Path $UserHomeDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserPublicDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserGroupDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserPersonalDir -ErrorAction Stop
 
-    # Crear enlaces simbólicos
-    New-Item -ItemType Junction -Path $UserPublicDir -Target "C:\FTP\publica"
-    New-Item -ItemType Junction -Path $UserGroupDir -Target "C:\FTP\$grupo"
+        # Asignar permisos exclusivos a la carpeta personal
+        $Acl = Get-Acl $UserPersonalDir
+        $Acl.SetAccessRuleProtection($true, $false)
+        $Acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("$username", "FullControl", "Allow")))
+        $Acl | Set-Acl $UserPersonalDir
 
-    Write-Host "Carpetas personales creadas y permisos asignados para el usuario '$username'."
+        # Crear enlaces simbólicos
+        New-Item -ItemType Junction -Path $UserPublicDir -Target "C:\FTP\publica" -ErrorAction Stop
+        New-Item -ItemType Junction -Path $UserGroupDir -Target "C:\FTP\$grupo" -ErrorAction Stop
+
+        Write-Host "Carpetas personales creadas y permisos asignados para el usuario '$username'."
+    } catch {
+        Write-Host "Error al crear carpetas o asignar permisos para el usuario '$username': $_"
+    }
 }
 # Función para asignar un usuario a un grupo
 function asignar_grupo {
@@ -228,7 +255,6 @@ Configurar-AutenticacionYAutorizacion
 Configurar-PoliticasSSL
 Configurar-PermisosNTFSyReiniciarFTP
 
-# Menú interactivo
 while ($true) {
     Write-Host "Seleccione una opción:"
     Write-Host "1. Verificar instalación del FTP"
