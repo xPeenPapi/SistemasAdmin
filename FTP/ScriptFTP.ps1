@@ -1,7 +1,7 @@
 Import-Module WebAdministration
 function Crear-SitioFTP {
     param (
-        [string]$SitioFTPName = "FTPSiteName",
+        [string]$SitioFTPName = "SFTPSiteName",
         [string]$FTPRootDir = "C:\FTP",
         [int]$Puerto = 21
     )
@@ -14,28 +14,31 @@ function Crear-SitioFTP {
     }
     
 }
-
+function Get-ADSI(){
+    return [ADSI]"WinNT://$env:ComputerName"
+}
 # Función para crear el grupo FTP
-function Crear-GrupoFTP {
+function Crear-Grupo(){
     param (
-        [string]$GrupoFTP = "FTPUserGroupName"
+        [string]$GrupoFTP = "SFTPUserGroupName",
+        [String]$descripcion = "Los usuarios del grupo se pueden conectar por FTP"
     )
 
-    # Verificar si el grupo ya existe
-    if (-not (Get-LocalGroup -Name $GrupoFTP -ErrorAction SilentlyContinue)) {
-        # Crear el grupo
-        New-LocalGroup -Name $GrupoFTP
-        Write-Host "Grupo '$GrupoFTP' creado."
-    } else {
-        Write-Host "El grupo '$GrupoFTP' ya existe."
-    }
+    # Creación del grupo
+    $FTPUserGroupName = $GrupoFTP
+    $ADSI = Get-ADSI
+    $FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
+    $FTPUserGroup.SetInfo()
+    $FTPUserGroup.Description = $descripcion
+    $FTPUserGroup.SetInfo()
+    return $nombreGrupo
 }
 
 # Función para configurar autenticación y autorización
 function Configurar-AutenticacionYAutorizacion {
     param (
-        [string]$SitioFTPName = "FTPSiteName",
-        [string]$GrupoFTP = "FTPUserGroupName"
+        [string]$SitioFTPName = "SFTPSiteName",
+        [string]$GrupoFTP = "SFTPUserGroupName"
     )
 
     # Habilitar autenticación básica
@@ -62,7 +65,7 @@ function Configurar-AutenticacionYAutorizacion {
 # Función para configurar políticas SSL
 function Configurar-PoliticasSSL {
     param (
-        [string]$SitioFTPName = "FTPSiteName"
+        [string]$SitioFTPName = "SFTPSiteName"
     )
 
     # Ruta del sitio FTP
@@ -84,8 +87,8 @@ function Configurar-PoliticasSSL {
 function Configurar-PermisosNTFSyReiniciarFTP {
     param (
         [string]$FTPRootDir = "C:\FTP",
-        [string]$FTPUserGroupName = "FTPUserGroupName",
-        [string]$FTPSiteName = "FTPSiteName"
+        [string]$FTPUserGroupName = "SFTPUserGroupName",
+        [string]$FTPSiteName = "SFTPSiteName"
     )
 
     # Crear una regla de acceso para el grupo
