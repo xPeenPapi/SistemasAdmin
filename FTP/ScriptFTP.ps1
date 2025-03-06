@@ -1,7 +1,7 @@
 Import-Module WebAdministration
 function Crear-SitioFTP {
     param (
-        [string]$SitioFTPName = "SFTPSiteName",
+        [string]$SitioFTPName = "FTPSiteName",
         [string]$FTPRootDir = "C:\FTP",
         [int]$Puerto = 21
     )
@@ -18,7 +18,7 @@ function Crear-SitioFTP {
 # Función para crear el grupo FTP
 function Crear-GrupoFTP {
     param (
-        [string]$GrupoFTP = "SFTPUserGroupName"
+        [string]$GrupoFTP = "FTPUserGroupName"
     )
 
     # Verificar si el grupo ya existe
@@ -34,8 +34,8 @@ function Crear-GrupoFTP {
 # Función para configurar autenticación y autorización
 function Configurar-AutenticacionYAutorizacion {
     param (
-        [string]$SitioFTPName = "SFTPSiteName",
-        [string]$GrupoFTP = "SFTPUserGroupName"
+        [string]$SitioFTPName = "FTPSiteName",
+        [string]$GrupoFTP = "FTPUserGroupName"
     )
 
     # Habilitar autenticación básica
@@ -62,7 +62,7 @@ function Configurar-AutenticacionYAutorizacion {
 # Función para configurar políticas SSL
 function Configurar-PoliticasSSL {
     param (
-        [string]$SitioFTPName = "SFTPSiteName"
+        [string]$SitioFTPName = "FTPSiteName"
     )
 
     # Ruta del sitio FTP
@@ -84,8 +84,8 @@ function Configurar-PoliticasSSL {
 function Configurar-PermisosNTFSyReiniciarFTP {
     param (
         [string]$FTPRootDir = "C:\FTP",
-        [string]$FTPUserGroupName = "SFTPUserGroupName",
-        [string]$FTPSiteName = "SFTPSiteName"
+        [string]$FTPUserGroupName = "FTPUserGroupName",
+        [string]$FTPSiteName = "FTPSiteName"
     )
 
     # Crear una regla de acceso para el grupo
