@@ -27,7 +27,7 @@ validar_contraseña() {
         echo "La contraseña no puede estar vacía."
         return 1
     fi
-    if [[ "${#password}" -lt 8 ]]; then
+    if [[ "${#password}" -gt 8 ]]; then
         echo "La contraseña debe tener al menos 8 caracteres."
         return 1
     fi
@@ -62,7 +62,7 @@ crear_usuario() {
 
     sudo useradd "$username"
     sudo mkdir /home/$username
-    sudo chmod 700 /home/$username
+    sudo chmod 777 /home/$username
     sudo chown $username:$username /home/$username
 
     sudo mkdir /home/$username/publica
@@ -113,11 +113,12 @@ cambiar_grupo() {
 
     read -p "Escriba el nuevo grupo de ese usuario: " grupo
     if [[ ! "$grupo" =~ ^(reprobados|recursadores)$ ]]; then
-        echo "El grupo $grupo no existe. Debe ser 'reprobados' o 'recursadores'."
+       echo "El grupo $grupo no existe. Debe ser 'reprobados' o 'recursadores'."
         return 1
     fi
 
     grupo_actual=$(ls /home/$user | grep -E 'reprobados|recursadores')
+    
     if [[ "$grupo_actual" == "$grupo" ]]; then
         echo "El usuario $user ya está en el grupo $grupo. No se realizaron cambios."
         return
@@ -131,7 +132,7 @@ cambiar_grupo() {
     sudo deluser "$user" "$grupo_actual"
     sudo adduser "$user" "$grupo"
 
-    sudo mv "/home/$user/$grupo_actual" "/home/$user/$grupo"
+    sudo mv /home/$user/$grupo_actual /home/$user/$grupo
     sudo mount --bind "/home/FTP/$grupo" "/home/$user/$grupo"
 
     echo "Usuario $user cambiado al grupo $grupo."
