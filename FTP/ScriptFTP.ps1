@@ -1,4 +1,3 @@
-# Importar módulos necesarios
 Import-Module WebAdministration
 function Crear-SitioFTP {
     param (
@@ -7,14 +6,13 @@ function Crear-SitioFTP {
         [int]$Puerto = 21
     )
 
-    # Verificar si el sitio FTP ya existe
     if (-not (Get-WebSite -Name $SitioFTPName -ErrorAction SilentlyContinue)) {
-        # Crear el sitio FTP
         New-WebSite -Name $SitioFTPName -PhysicalPath $FTPRootDir -Port $Puerto -Force
         Write-Host "Sitio FTP '$SitioFTPName' creado en '$FTPRootDir'."
     } else {
         Write-Host "El sitio FTP '$SitioFTPName' ya existe."
     }
+    
 }
 
 # Función para crear el grupo FTP
@@ -44,7 +42,7 @@ function Configurar-AutenticacionYAutorizacion {
     $SFTPSitePath = "IIS:\Sites\$SitioFTPName"
     $BasicAuth = "ftpServer.security.authentication.basicAuthentication.enabled"
     Set-ItemProperty -Path $SFTPSitePath -Name $BasicAuth -Value $True
-    Write-Host "Autenticación básica habilitada para el sitio FTP '$SitioFTPName'."
+    Write-Host "Autenticación habilitada para el sitio FTP '$SitioFTPName'."
 
     # Agregar regla de autorización para el grupo FTP
     $Param = @{
@@ -143,13 +141,6 @@ function crear_grupos {
 function crear_usuario {
     $username = Read-Host "Ingrese el nombre de usuario"
     $password = Read-Host "Ingrese la contraseña" -AsSecureString
-    $grupo = Read-Host "Ingrese el grupo al que pertenecerá el usuario (reprobados/recursadores)"
-
-    # Validar que el grupo sea válido
-    if ($grupo -notin @("reprobados", "recursadores")) {
-        Write-Host "El grupo ingresado no es válido. Debe ser 'reprobados' o 'recursadores'."
-        return
-    }
 
     # Validar que la contraseña no esté vacía
     if ($password.Length -eq 0) {
@@ -163,15 +154,6 @@ function crear_usuario {
         Write-Host "Usuario '$username' creado."
     } catch {
         Write-Host "Error al crear el usuario '$username': $_"
-        return
-    }
-
-    # Agregar el usuario al grupo
-    try {
-        Add-LocalGroupMember -Group $grupo -Member $username -ErrorAction Stop
-        Write-Host "Usuario '$username' agregado al grupo '$grupo'."
-    } catch {
-        Write-Host "Error al agregar el usuario '$username' al grupo '$grupo': $_"
         return
     }
 
@@ -274,13 +256,24 @@ function cambiar_grupo {
     Add-LocalGroupMember -Group $nuevoGrupo -Member $username
     Write-Host "Usuario '$username' cambiado del grupo '$grupoActual' al grupo '$nuevoGrupo'."
 
-    # Actualizar enlace simbólico de la carpeta de grupo
-    $UserGroupDir = "C:\FTP\LocalUser\$username\$nuevoGrupo"
-    if (Test-Path $UserGroupDir) {
-        Remove-Item $UserGroupDir
+    # Ruta de la carpeta personal del usuario
+    $UserHomeDir = "C:\FTP\LocalUser\$username"
+
+    # Eliminar la carpeta del grupo anterior
+    $CarpetaGrupoAnterior = "$UserHomeDir\$grupoActual"
+    if (Test-Path $CarpetaGrupoAnterior) {
+        Remove-Item $CarpetaGrupoAnterior -Recurse -Force
+        Write-Host "Carpeta del grupo anterior '$grupoActual' eliminada."
     }
-    New-Item -ItemType Junction -Path $UserGroupDir -Target "C:\FTP\$nuevoGrupo"
-    Write-Host "Enlace simbólico de la carpeta de grupo actualizado."
+
+    # Crear la carpeta del nuevo grupo y el enlace simbólico
+    $CarpetaNuevoGrupo = "$UserHomeDir\$nuevoGrupo"
+    if (-not (Test-Path $CarpetaNuevoGrupo)) {
+        New-Item -ItemType Junction -Path $CarpetaNuevoGrupo -Target "C:\FTP\$nuevoGrupo"
+        Write-Host "Enlace simbólico de la carpeta de grupo '$nuevoGrupo' creado."
+    } else {
+        Write-Host "La carpeta del grupo '$nuevoGrupo' ya existe."
+    }
 }
 
 # Crear el sitio FTP si no existe
