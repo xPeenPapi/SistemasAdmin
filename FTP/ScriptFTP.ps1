@@ -1,6 +1,4 @@
 Import-Module WebAdministration
-
-# Función para crear el sitio FTP
 function Crear-SitioFTP {
     param (
         [string]$SitioFTPName = "SFTPSiteName",
@@ -14,31 +12,26 @@ function Crear-SitioFTP {
     } else {
         Write-Host "El sitio FTP '$SitioFTPName' ya existe."
     }
+    
 }
-
-# Función para obtener el objeto ADSI
-function Get-ADSI {
+function Get-ADSI(){
     return [ADSI]"WinNT://$env:ComputerName"
 }
-
 # Función para crear el grupo FTP
-function Crear-GrupoFTP {
+function Crear-GrupoFTP(){
     param (
         [string]$GrupoFTP = "SFTPUserGroupName",
-        [string]$descripcion = "Los usuarios del grupo se pueden conectar por FTP"
+        [String]$descripcion = "Los usuarios del grupo se pueden conectar por FTP"
     )
 
-    # Verificar si el grupo ya existe
-    if (-not (Get-LocalGroup -Name $GrupoFTP -ErrorAction SilentlyContinue)) {
-        $ADSI = Get-ADSI
-        $FTPUserGroup = $ADSI.Create("Group", "$GrupoFTP")
-        $FTPUserGroup.SetInfo()
-        $FTPUserGroup.Description = $descripcion
-        $FTPUserGroup.SetInfo()
-        Write-Host "Grupo '$GrupoFTP' creado."
-    } else {
-        Write-Host "El grupo '$GrupoFTP' ya existe."
-    }
+    # Creación del grupo
+    $FTPUserGroupName = $GrupoFTP
+    $ADSI = Get-ADSI
+    $FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
+    $FTPUserGroup.SetInfo()
+    $FTPUserGroup.Description = $descripcion
+    $FTPUserGroup.SetInfo()
+    return $GrupoFTP
 }
 
 # Función para configurar autenticación y autorización
@@ -48,14 +41,8 @@ function Configurar-AutenticacionYAutorizacion {
         [string]$GrupoFTP = "SFTPUserGroupName"
     )
 
-    # Verificar si el sitio FTP existe
-    $SFTPSitePath = "IIS:\Sites\$SitioFTPName"
-    if (-not (Test-Path $SFTPSitePath)) {
-        Write-Host "El sitio FTP '$SitioFTPName' no existe en IIS."
-        return
-    }
-
     # Habilitar autenticación básica
+    $SFTPSitePath = "IIS:\Sites\$SitioFTPName"
     $BasicAuth = "ftpServer.security.authentication.basicAuthentication.enabled"
     Set-ItemProperty -Path $SFTPSitePath -Name $BasicAuth -Value $True
     Write-Host "Autenticación habilitada para el sitio FTP '$SitioFTPName'."
@@ -89,12 +76,8 @@ function Configurar-PoliticasSSL {
         [string]$SitioFTPName = "SFTPSiteName"
     )
 
-    # Verificar si el sitio FTP existe
+    # Ruta del sitio FTP
     $FTPSitePath = "IIS:\Sites\$SitioFTPName"
-    if (-not (Test-Path $FTPSitePath)) {
-        Write-Host "El sitio FTP '$SitioFTPName' no existe en IIS."
-        return
-    }
 
     # Configurar políticas SSL
     $SSLPolicy = @(
@@ -102,13 +85,10 @@ function Configurar-PoliticasSSL {
         "ftpServer.security.ssl.dataChannelPolicy"
     )
 
-    try {
-        Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false -ErrorAction Stop
-        Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false -ErrorAction Stop
-        Write-Host "Políticas SSL configuradas para permitir conexiones SSL en el sitio FTP '$SitioFTPName'."
-    } catch {
-        Write-Host "Error al configurar las políticas SSL: $_"
-    }
+    Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false
+    Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
+
+    Write-Host "Políticas SSL configuradas para permitir conexiones SSL en el sitio FTP '$SitioFTPName'."
 }
 
 # Función para configurar permisos NTFS y reiniciar el sitio FTP
@@ -145,11 +125,173 @@ function Configurar-PermisosNTFSyReiniciarFTP {
     Write-Host "Sitio FTP '$FTPSiteName' reiniciado."
 }
 
+
+# Función para verificar la instalación del FTP
+function verificar_instalacion {
+    if (Get-Service -Name "FTPSVC" -ErrorAction SilentlyContinue) {
+        Write-Host "El servicio FTP está instalado y en ejecución."
+    } else {
+        Write-Host "El servicio FTP no está instalado o no está en ejecución."
+    }
+}
+
+# Función para crear los grupos reprobados y recursadores
+function crear_grupos {
+    $grupos = @("reprobados", "recursadores")
+    foreach ($grupo in $grupos) {
+        if (-not (Get-LocalGroup -Name $grupo -ErrorAction SilentlyContinue)) {
+            New-LocalGroup -Name $grupo
+            Write-Host "Grupo '$grupo' creado."
+        } else {
+            Write-Host "El grupo '$grupo' ya existe."
+        }
+    }
+}
+
+# Función para crear un usuario
+function crear_usuario {
+    $username = Read-Host "Ingrese el nombre de usuario"
+    $password = Read-Host "Ingrese la contraseña" -AsSecureString
+
+    # Validar que la contraseña no esté vacía
+    if ($password.Length -eq 0) {
+        Write-Host "La contraseña no puede estar vacía."
+        return
+    }
+
+    # Crear el usuario si no existe
+    try {
+        New-LocalUser -Name $username -Password $password -FullName $username -ErrorAction Stop
+        Write-Host "Usuario '$username' creado."
+    } catch {
+        Write-Host "Error al crear el usuario '$username': $_"
+        return
+    }
+
+    # Crear carpetas personales y asignar permisos
+    $UserHomeDir = "C:\FTP\LocalUser\$username"
+    $UserPublicDir = "$UserHomeDir\publica"
+    $UserGroupDir = "$UserHomeDir\$grupo"
+    $UserPersonalDir = "$UserHomeDir\$username"
+
+    try {
+        # Crear carpetas compartidas si no existen
+        if (-not (Test-Path "C:\FTP\publica")) {
+            New-Item -ItemType Directory -Path "C:\FTP\publica" -ErrorAction Stop
+        }
+        if (-not (Test-Path "C:\FTP\reprobados")) {
+            New-Item -ItemType Directory -Path "C:\FTP\reprobados" -ErrorAction Stop
+        }
+        if (-not (Test-Path "C:\FTP\recursadores")) {
+            New-Item -ItemType Directory -Path "C:\FTP\recursadores" -ErrorAction Stop
+        }
+
+        # Crear carpetas personales
+        New-Item -ItemType Directory -Path $UserHomeDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserPublicDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserGroupDir -ErrorAction Stop
+        New-Item -ItemType Directory -Path $UserPersonalDir -ErrorAction Stop
+
+        # Asignar permisos exclusivos a la carpeta personal
+        $Acl = Get-Acl $UserPersonalDir
+        $Acl.SetAccessRuleProtection($true, $false)
+        $Acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("$username", "FullControl", "Allow")))
+        $Acl | Set-Acl $UserPersonalDir
+
+        # Crear enlaces simbólicos
+        New-Item -ItemType Junction -Path $UserPublicDir -Target "C:\FTP\publica" -ErrorAction Stop
+        New-Item -ItemType Junction -Path $UserGroupDir -Target "C:\FTP\$grupo" -ErrorAction Stop
+
+        Write-Host "Carpetas personales creadas y permisos asignados para el usuario '$username'."
+    } catch {
+        Write-Host "Error al crear carpetas o asignar permisos para el usuario '$username': $_"
+    }
+}
+# Función para asignar un usuario a un grupo
+function asignar_grupo {
+    $username = Read-Host "Ingrese el nombre de usuario"
+    $grupo = Read-Host "Ingrese el grupo al que desea asignar al usuario (reprobados/recursadores)"
+
+    # Validar que el grupo sea válido
+    if ($grupo -notin @("reprobados", "recursadores")) {
+        Write-Host "El grupo ingresado no es válido. Debe ser 'reprobados' o 'recursadores'."
+        return
+    }
+
+    # Verificar si el usuario existe
+    if (-not (Get-LocalUser -Name $username -ErrorAction SilentlyContinue)) {
+        Write-Host "El usuario '$username' no existe."
+        return
+    }
+
+    # Agregar el usuario al grupo
+    Add-LocalGroupMember -Group $grupo -Member $username
+    Write-Host "Usuario '$username' asignado al grupo '$grupo'."
+
+    # Actualizar enlace simbólico de la carpeta de grupo
+    $UserGroupDir = "C:\FTP\LocalUser\$username\$grupo"
+    if (Test-Path $UserGroupDir) {
+        Remove-Item $UserGroupDir
+    }
+    New-Item -ItemType Junction -Path $UserGroupDir -Target "C:\FTP\$grupo"
+    Write-Host "Enlace simbólico de la carpeta de grupo actualizado."
+}
+
+# Función para cambiar un usuario de grupo
+function cambiar_grupo {
+    $username = Read-Host "Ingrese el nombre de usuario"
+    $nuevoGrupo = Read-Host "Ingrese el nuevo grupo para el usuario (reprobados/recursadores)"
+
+    # Validar que el grupo sea válido
+    if ($nuevoGrupo -notin @("reprobados", "recursadores")) {
+        Write-Host "El grupo ingresado no es válido. Debe ser 'reprobados' o 'recursadores'."
+        return
+    }
+
+    # Verificar si el usuario existe
+    if (-not (Get-LocalUser -Name $username -ErrorAction SilentlyContinue)) {
+        Write-Host "El usuario '$username' no existe."
+        return
+    }
+
+    # Obtener el grupo actual del usuario
+    $grupoActual = Get-LocalGroup | Where-Object { (Get-LocalGroupMember -Group $_).Name -eq "$env:COMPUTERNAME\$username" } | Select-Object -ExpandProperty Name
+
+    if ($grupoActual -eq $nuevoGrupo) {
+        Write-Host "El usuario '$username' ya está en el grupo '$nuevoGrupo'."
+        return
+    }
+
+    # Cambiar el grupo del usuario
+    Remove-LocalGroupMember -Group $grupoActual -Member $username
+    Add-LocalGroupMember -Group $nuevoGrupo -Member $username
+    Write-Host "Usuario '$username' cambiado del grupo '$grupoActual' al grupo '$nuevoGrupo'."
+
+    # Ruta de la carpeta personal del usuario
+    $UserHomeDir = "C:\FTP\LocalUser\$username"
+
+    # Eliminar la carpeta del grupo anterior
+    $CarpetaGrupoAnterior = "$UserHomeDir\$grupoActual"
+    if (Test-Path $CarpetaGrupoAnterior) {
+        Remove-Item $CarpetaGrupoAnterior -Recurse -Force
+        Write-Host "Carpeta del grupo anterior '$grupoActual' eliminada."
+    }
+
+    # Crear la carpeta del nuevo grupo y el enlace simbólico
+    $CarpetaNuevoGrupo = "$UserHomeDir\$nuevoGrupo"
+    if (-not (Test-Path $CarpetaNuevoGrupo)) {
+        New-Item -ItemType Junction -Path $CarpetaNuevoGrupo -Target "C:\FTP\$nuevoGrupo"
+        Write-Host "Enlace simbólico de la carpeta de grupo '$nuevoGrupo' creado."
+    } else {
+        Write-Host "La carpeta del grupo '$nuevoGrupo' ya existe."
+    }
+}
+
 # Crear el sitio FTP si no existe
-Crear-SitioFTP
+Crear-SitioFTP 
 
 # Crear el grupo FTP si no existe
-Crear-GrupoFTP
+Crear-GrupoFTP 
 
 # Configurar autenticación y autorización
 Configurar-AutenticacionYAutorizacion 
@@ -160,7 +302,6 @@ Configurar-PoliticasSSL
 # Configurar permisos NTFS y reiniciar el sitio FTP
 Configurar-PermisosNTFSyReiniciarFTP 
 
-# Menú interactivo
 while ($true) {
     Write-Host "Seleccione una opción:"
     Write-Host "1. Verificar instalación del FTP"
