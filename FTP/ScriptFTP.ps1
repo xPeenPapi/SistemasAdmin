@@ -62,7 +62,7 @@ function Configurar-AutenticacionYAutorizacion {
 
     # Verificar si la regla de autorización ya existe
     $reglas = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\" -Location $SitioFTPName
-    $reglaExistente = $reglas | Where-Object { $_.roles -eq $GrupoFTP }
+    $reglaExistente = $reglas | Where-Object { $_.roles -eq $GrupoFTP -and $_.permissions -eq 1 -and $_.accessType -eq "Allow" }
 
     if (-not $reglaExistente) {
         # Agregar regla de autorización para el grupo FTP
@@ -104,7 +104,7 @@ function Configurar-PoliticasSSL {
 
     try {
         Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false -ErrorAction Stop
-        Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false -ErrorAction Stop
+        Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false -ErrorAction Stop
         Write-Host "Políticas SSL configuradas para permitir conexiones SSL en el sitio FTP '$SitioFTPName'."
     } catch {
         Write-Host "Error al configurar las políticas SSL: $_"
@@ -152,13 +152,13 @@ Crear-SitioFTP
 Crear-GrupoFTP
 
 # Configurar autenticación y autorización
-Configurar-AutenticacionYAutorizacion -SitioFTPName "SFTPSiteName" -GrupoFTP "SFTPUserGroupName"
+Configurar-AutenticacionYAutorizacion 
 
 # Configurar políticas SSL
-Configurar-PoliticasSSL -SitioFTPName "SFTPSiteName"
+Configurar-PoliticasSSL 
 
 # Configurar permisos NTFS y reiniciar el sitio FTP
-Configurar-PermisosNTFSyReiniciarFTP -FTPRootDir "C:\FTP" -FTPUserGroupName "SFTPUserGroupName" -FTPSiteName "SFTPSiteName"
+Configurar-PermisosNTFSyReiniciarFTP 
 
 # Menú interactivo
 while ($true) {
