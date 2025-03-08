@@ -124,14 +124,15 @@ function crear_usuario {
     $UserPersonalDir = "$UserHomeDir\$username"
 
     try {
-        # Crear carpetas compartidas si no existen
+        # Crear carpeta compartida pública si no existe
         if (-not (Test-Path "C:\FTP\publica")) {
             New-Item -ItemType Directory -Path "C:\FTP\publica" -ErrorAction Stop
         }
 
-        # Crear carpetas personales
+        # Crear carpeta principal del usuario
         New-Item -ItemType Directory -Path $UserHomeDir -ErrorAction Stop
-        New-Item -ItemType Directory -Path $UserPublicDir -ErrorAction Stop
+
+        # Crear carpeta personal del usuario
         New-Item -ItemType Directory -Path $UserPersonalDir -ErrorAction Stop
 
         # Asignar permisos exclusivos a la carpeta personal
