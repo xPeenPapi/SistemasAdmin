@@ -105,9 +105,13 @@ function crear_usuario {
         return
     }
 
-    # Crear el usuario si no existe
+    # Crear el usuario utilizando ADSI
     try {
-        New-LocalUser -Name $username -Password $password -FullName $username -ErrorAction Stop
+        $ADSI = [ADSI]"WinNT://$env:COMPUTERNAME"
+        $CreateUserFTPUser = $ADSI.Create("User", "$username")
+        $CreateUserFTPUser.SetInfo()
+        $CreateUserFTPUser.SetPassword("$passwordPlainText")
+        $CreateUserFTPUser.SetInfo()
         Write-Host "Usuario '$username' creado."
     } catch {
         Write-Host "Error al crear el usuario '$username': $_"
@@ -155,10 +159,7 @@ function mostrar_menu {
     Write-Host "===================================="
 }
 
-function listar_usuarios {
-    Write-Host "Usuarios FTP existentes:"
-    Get-LocalUser | Where-Object { $_.Name -like "FTP*" } | Format-Table Name, Enabled
-}
+
 
 # Ejemplo de uso:
 Crear-SitioFTP
@@ -173,8 +174,7 @@ do {
 
     switch ($opcion) {
         1 { crear_usuario }
-        3 { listar_usuarios }
-        4 { Write-Host "Saliendo del menú..."; break }
+        2 { Write-Host "Saliendo del menú..."; break }
         default { Write-Host "Opción no válida. Intente nuevamente." }
     }
 
