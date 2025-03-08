@@ -1,234 +1,222 @@
-function Crear-SitioFTP {
-    $FTPSiteName = "FTP"
-    $FTPRootDir = "C:\FTP"
-    $FTPPort = 21
+Import-Module WebAdministration
+function Crear-SitioFTP(){
 
-    New-WebSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir
-    Write-Output "Sitio FTP '$FTPSiteName' creado en el puerto $FTPPort con directorio raíz '$FTPRootDir'."
+    Param(
+        [String]$FTPSiteName,
+        [String]$FTPRootDir,
+        [Int]$FTPPort
+        )
+    New-WebFtpSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir
+    }
+    
+function VerificarInstalacionFTP {
+    [CmdletBinding()]
+    param(
+        [Parameter(Position=0,Mandatory=$true)] [string]$FeatureName 
+    )  
+    if((Get-WindowsOptionalFeature -FeatureName $FeatureName -Online).State -eq "Enabled") {
+        return $true
+    }else{
+        return $false
+    }
 }
 
+if(-not(VerificarInstalacionFTP "Web-Server")){
+    Install-WindowsFeature Web-Server -IncludeManagementTools
+}
+
+if(-not(VerificarInstalacionFTP "Web-Ftp-Server")){
+    Install-WindowsFeature Web-Ftp-Server -IncludeAllSubFeature
+}
+
+if(-not(VerificarInstalacionFTP "Web-Basic-Auth")){
+    Install-WindowsFeature Web-Basic-Auth
+}
 function Get-ADSI {
     return [ADSI]"WinNT://$env:ComputerName"
 }
 
 function Crear-GrupoFTP {
-    $FTPUserGroupName = "FTP Usuarios"
-    $Description = "Los usuarios del grupo pueden conectarse a través del FTP"
-
+    param(
+        [String]$nombreGrupo,
+        [string]$descripcion
+    )
+    $FTPUserGroupName = $nombreGrupo
     $ADSI = Get-ADSI
     $FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
     $FTPUserGroup.SetInfo()
-    $FTPUserGroup.Description = $Description
+    $FTPUserGroup.Description = "$descripcion"
     $FTPUserGroup.SetInfo()
-    Write-Output "Grupo de usuarios FTP '$FTPUserGroupName' creado con descripción '$Description'."
+    mkdir C:\FTP\$nombreGrupo
+
+}
+
+function Crear-UsuarioFTP(){
+    Param(
+        [String]$User,
+        [String]$Password
+    )
+
+    $FTPUserName = $User
+    $FTPPassword = $Password
+    $ADSI = Get-ADSI
+    $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
+    $CreateUserFTPUser.SetInfo()
+    $CreateUserFTPUser.SetPassword("$FTPPassword")
+    $CreateUserFTPUser.SetInfo()
+
+    mkdir C:\FTP\LocalUser\$User
+    mkdir C:\FTP\LocalUser\$User\$User
+    mkdir C:\FTP\LocalUser\$User\Publica
+    cmd /c mklink /D C:\FTP\LocalUser\$User\Publica C:\FTP\Publica
+
+}
+function Asignar-Grupo {
+    Param (
+        [String]$User,
+        [String]$nombreGrupo,
+        [String]$FTPSiteName
+    )
+
+    $UserAccount = New-Object System.Security.Principal.NTAccount("$User")
+    $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
+    $User = [ADSI]"WinNT://$SID"
+    $Group.Add($User.Path)
+    
+    
+    cmd /c mklink /D C:\FTP\LocalUser\$User\$nombreGrupo C:\FTP\$nombreGrupo
+    
+    $FTPRootDir ="C:\FTP\LocalUser\$User\$nombreGrupo"
+    
+    ConfigurarPermisosNTFS $nombreGrupo $FTPRootDir $FTPSiteName
+    
 }
 
 function Configurar-FTPSite {
-    $FTPSiteName = "FTP"
-    $FTPUserGroupName = "FTP Usuarios"
+    Param ([String]$FTPSiteName)
 
-    $FTPSitePath = "IIS:\Sites\$FTPSiteName"
-    $BasicAuth = "ftpServer.security.authentication.basicAuthentication.enabled"
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
 
     $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
+        Filter = "system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
-            roles = "$FTPUserGroupName"
-            permissions = 1  # 1 = Lectura, 3 = Lectura y Escritura
+            users = "*"
+            permissions = 3
         }
-        PSPath = "IIS:\"
-        Location = $FTPSiteName
+        PSPath = 'IIS:\\'
+    Location = $FTPSiteName
     }
 
+
     Add-WebConfiguration @Param
-    Write-Output "Sitio FTP '$FTPSiteName' configurado con autenticación básica y autorización para el grupo '$FTPUserGroupName'."
-}
+
+    Configurar-SSLPolicy $FTPSitePath
+    }
+
+   
 
 function Configurar-SSLPolicy {
-    $FTPSiteName = "FTP"
+    Param ([String]$FTPSitePath)
 
-    $FTPSitePath = "IIS:\Sites\$FTPSiteName"
     $SSLPolicy = @(
-        "ftpServer.security.ssl.controlChannelPolicy",
-        "ftpServer.security.ssl.dataChannelPolicy"
-    )
-    Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false
-    Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
-    Write-Output "Políticas de SSL deshabilitadas para el sitio FTP '$FTPSiteName'."
+    'ftpServer.security.ssl.controlChannelPolicy',
+    'ftpServer.security.ssl.dataChannelPolicy'
+)
+
+Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false
+Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
+
 }
 
 function ConfigurarPermisosNTFS {
-    param (
-        [string]$username  # Nombre del usuario que se está creando
+    Param ([String]$Objeto,[String]$FtpDir,[String]$FtpSiteName)
+
+
+    $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+    $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+
+    $ACL = Get-Acl -Path $FtpDir
+    $ACL.SetAccessRule($AccessRule)
+    $ACL | Set-Acl -Path $FtpDir
+
+    # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
+    Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
+
+}
+function Crear_RutaFTP(){
+    Param(
+        [string]$RutaFTP
     )
-
-    # Directorios
-    $FTPRootDir = "C:\FTP"
-    $UserHomeDir = "C:\FTP\LocalUser\$username"
-    $UserPersonalDir = "$UserHomeDir\$username"
-
-    # Asignar permisos al directorio raíz del FTP para el grupo "FTP Usuarios"
-    $GroupAccount = New-Object System.Security.Principal.NTAccount("FTP Usuarios")
-    $GroupAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $GroupAccount,
-        "ReadAndExecute",  # Permisos de lectura y ejecución
-        "ContainerInherit,ObjectInherit",  # Herencia de permisos
-        "None",  # Propagación de permisos
-        "Allow"  # Tipo de acceso (Allow o Deny)
-    )
-    $ACL = Get-Acl -Path $FTPRootDir
-    $ACL.AddAccessRule($GroupAccessRule)
-    Set-Acl -Path $FTPRootDir -AclObject $ACL
-    Write-Output "Permisos NTFS configurados para el grupo 'FTP Usuarios' en el directorio '$FTPRootDir'."
-
-    # Asignar permisos a la carpeta personal del usuario
-    $UserAccount = New-Object System.Security.Principal.NTAccount("$username")
-    $UserAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $UserAccount,
-        "FullControl",  # Permisos completos
-        "ContainerInherit,ObjectInherit",  # Herencia de permisos
-        "None",  # Propagación de permisos
-        "Allow"  # Tipo de acceso (Allow o Deny)
-    )
-    $ACL = Get-Acl -Path $UserPersonalDir
-    $ACL.SetAccessRuleProtection($true, $false)  # Deshabilitar la herencia de permisos
-    $ACL.AddAccessRule($UserAccessRule)
-    Set-Acl -Path $UserPersonalDir -AclObject $ACL
-    Write-Output "Permisos NTFS configurados para el usuario '$username' en el directorio '$UserPersonalDir'."
-
-    # Reiniciar el sitio FTP
-    Restart-WebItem "IIS:\Sites\FTP" -Verbose
-    Write-Output "Sitio FTP reiniciado."
+    if(!(Test-Path $RutaFTP)){
+        mkdir $RutaFTP
+    }
 }
 
-function crear_usuario {
-    # Solicitar nombre de usuario y contraseña
-    $username = Read-Host "Ingrese el nombre de usuario"
-    $password = Read-Host "Ingrese la contraseña" -AsSecureString
+$Ruta = "C:\FTP"
+Crear_RutaFTP $Ruta
 
-    # Validar el nombre de usuario
-    if ($username.Length -gt 20) {
-        Write-Host "Error: El nombre de usuario no puede tener más de 20 caracteres."
-        return
+$FTPSiteName= "FTP"
+$FTPRootDir= "C:\FTP\"
+$FTPPort=21
+$FTPRootDirLogin= "C:\FTP\LocalUser"
+
+
+Crear-SitioFTP -Name $FTPSiteName -PhysicalPath $FTPRootDIR -Port $FTPPort
+
+Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
+Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
+Crear-GrupoFTP -nombreGrupo "publica" -descripcion "Grupo Publica"
+ConfigurarPermisosNTFS -nombreGrupo "reprobados" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -nombreGrupo "recursadores" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
+
+VerificarInstalacionFTP  
+Configurar-FTPSite $FTPSiteName
+Configurar-SSLPolicy 
+
+while($true){
+    echo "===================================="
+    echo "          Menú Principal           "
+    echo "===================================="
+    echo "Menu"
+    echo "1. Agregar usuario"
+    echo "2. Asignar Grupo"
+    echo "2. Cambiar usuario de grupo"
+    echo "3. Salir"
+
+    try{
+        $opcion = Read-Host "Selecciona una opcion"
+        $intOpcion = [int]$opcion
     }
-    if ($username -match "[^a-zA-Z0-9]") {
-        Write-Host "Error: El nombre de usuario no puede contener caracteres especiales o puntos."
-        return
+    catch{
+        echo "Valor invalido"
     }
 
-    # Validar la contraseña
-    $passwordPlainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-        [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($password)
-    )
-    if ($passwordPlainText.Length -ne 8) {
-        Write-Host "Error: La contraseña debe tener exactamente 8 caracteres."
-        return
+    if($intOpcion -eq 3){
+        echo "Saliendo..."
+        break
     }
 
-    # Verificar si el usuario ya existe
-    if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
-        Write-Host "Error: El usuario '$username' ya existe."
-        return
-    }
+    if($intOpcion -is [int]){
+        switch($opcion){
+            1 {
+                $User= Read-Host "Ingresa el Usuario"
+                $Password = Read-Host "Ingresa la contraseña del usuario"
+                Crear-UsuarioFTP $User $Password
 
-    # Crear el usuario utilizando ADSI
-    try {
-        $ADSI = [ADSI]"WinNT://$env:COMPUTERNAME"
-        $CreateUserFTPUser = $ADSI.Create("User", "$username")
-        $CreateUserFTPUser.SetInfo()
+            }
+            2 {
+            $User= Read-Host "Ingrese el nombre del Usuario asignar"
+            $nombreGrupo = Read-Host "Ingrese el nombre del grupo para asignar al usuario"
 
-        # Intentar establecer la contraseña
-        try {
-            $CreateUserFTPUser.SetPassword("$passwordPlainText")
-            Write-Host "Usuario '$username' creado y contraseña asignada."
-        } catch {
-            # Si la contraseña no es válida, eliminar el usuario creado
-            $CreateUserFTPUser.Delete()
-            Write-Host "Error: La contraseña no cumple con los requisitos de la política de contraseñas. El usuario no fue creado."
-            return
+             Asignar-Grupo $User $nombreGrupo $FTPSiteName
+             ConfigurarPermisosNTFS $nombreGrupo $FTPRootDirLogin $FTPSiteName
+            }
         }
-
-        $CreateUserFTPUser.SetInfo()
-    } catch {
-        Write-Host "Error al crear el usuario '$username': $_"
-        return
     }
-
-    # Agregar el usuario al grupo "FTP Usuarios"
-    try {
-        $Group = [ADSI]"WinNT://$env:COMPUTERNAME/FTP Usuarios,group"
-        $Group.Add("WinNT://$env:COMPUTERNAME/$username")
-        Write-Host "Usuario '$username' agregado al grupo 'FTP Usuarios'."
-    } catch {
-        Write-Host "Error al agregar el usuario '$username' al grupo 'FTP Usuarios': $_"
-        return
-    }
-
-    # Crear carpetas personales y asignar permisos
-    $UserHomeDir = "C:\FTP\LocalUser\$username"
-    $UserPublicDir = "$UserHomeDir\publica"
-    $UserPersonalDir = "$UserHomeDir\$username"
-
-    try {
-        # Crear carpeta compartida pública si no existe
-        if (-not (Test-Path "C:\FTP\publica")) {
-            New-Item -ItemType Directory -Path "C:\FTP\publica" -ErrorAction Stop
-        }
-
-        # Crear carpeta principal del usuario
-        New-Item -ItemType Directory -Path $UserHomeDir -ErrorAction Stop
-
-        # Crear carpeta personal del usuario
-        New-Item -ItemType Directory -Path $UserPersonalDir -ErrorAction Stop
-
-        # Asignar permisos exclusivos a la carpeta personal
-        $Acl = Get-Acl $UserPersonalDir
-        $Acl.SetAccessRuleProtection($true, $false)
-        $Acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule("$username", "FullControl", "Allow")))
-        $Acl | Set-Acl $UserPersonalDir
-
-        # Crear enlace simbólico para la carpeta pública
-        New-Item -ItemType Junction -Path $UserPublicDir -Target "C:\FTP\publica" -ErrorAction Stop
-
-        Write-Host "Carpetas personales creadas y permisos asignados para el usuario '$username'."
-    } catch {
-        Write-Host "Error al crear carpetas o asignar permisos para el usuario '$username': $_"
-    }
-
-    # Configurar permisos NTFS para el usuario
-    ConfigurarPermisosNTFS -username $username
 }
-
-Crear-SitioFTP
-Crear-GrupoFTP
-Configurar-FTPSite
-Configurar-SSLPolicy
-ConfigurarPermisosNTFS
-crear_usuario
-# Menú principal
-#do {
-#    Clear-Host
-#    Write-Host "===================================="
-#    Write-Host "          Menú Principal           "
-#    Write-Host "===================================="
-#    Write-Host "1. Crear un nuevo usuario FTP"
-#    Write-Host "2. Listar usuarios FTP"
-#   Write-Host "3. Salir"
-#   Write-Host "===================================="
-#
-#    $opcion = Read-Host "Seleccione una opción (1-3)"
-#
-#    switch ($opcion) {
-#        1 { crear_usuario }
-#       2 { Write-Host "Listando usuarios FTP..."; Get-LocalUser | Where-Object { $_.Name -like "FTP*" } | Format-Table Name, Enabled }
-##       3 { Write-Host "Saliendo del menú..."; break }
- #       default { Write-Host "Opción no válida. Intente nuevamente." }
-#    }
-#
- #   if ($opcion -ne 3) {
- #       Write-Host "Presione Enter para continuar..."
-  #      Read-Host
-#    }
-#} while ($opcion -ne 3)

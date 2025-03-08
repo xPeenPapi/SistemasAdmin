@@ -1,7 +1,7 @@
 Import-Module WebAdministration
 function Crear-SitioFTP {
     param (
-        [string]$SitioFTPName = "SFTPSiteName",
+        [string]$SitioFTPName = "FTPSiteName",
         [string]$FTPRootDir = "C:\FTP",
         [int]$Puerto = 21
     )
