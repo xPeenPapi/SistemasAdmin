@@ -127,14 +127,30 @@ function crear_usuario {
         return
     }
 
+    # Verificar si el usuario ya existe
+    if (Get-LocalUser -Name $username -ErrorAction SilentlyContinue) {
+        Write-Host "Error: El usuario '$username' ya existe."
+        return
+    }
+
     # Crear el usuario utilizando ADSI
     try {
         $ADSI = [ADSI]"WinNT://$env:COMPUTERNAME"
         $CreateUserFTPUser = $ADSI.Create("User", "$username")
         $CreateUserFTPUser.SetInfo()
-        $CreateUserFTPUser.SetPassword("$passwordPlainText")
+
+        # Intentar establecer la contraseña
+        try {
+            $CreateUserFTPUser.SetPassword("$passwordPlainText")
+            Write-Host "Usuario '$username' creado y contraseña asignada."
+        } catch {
+            # Si la contraseña no es válida, eliminar el usuario creado
+            $CreateUserFTPUser.Delete()
+            Write-Host "Error: La contraseña no cumple con los requisitos de la política de contraseñas. El usuario no fue creado."
+            return
+        }
+
         $CreateUserFTPUser.SetInfo()
-        Write-Host "Usuario '$username' creado."
     } catch {
         Write-Host "Error al crear el usuario '$username': $_"
         return
