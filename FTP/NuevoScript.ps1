@@ -206,29 +206,29 @@ Crear-GrupoFTP
 Configurar-FTPSite
 Configurar-SSLPolicy
 ConfigurarPermisosNTFS
-
+crear_usuario
 # Menú principal
-do {
-    Clear-Host
-    Write-Host "===================================="
-    Write-Host "          Menú Principal           "
-    Write-Host "===================================="
-    Write-Host "1. Crear un nuevo usuario FTP"
-    Write-Host "2. Listar usuarios FTP"
-    Write-Host "3. Salir"
-    Write-Host "===================================="
-
-    $opcion = Read-Host "Seleccione una opción (1-3)"
-
-    switch ($opcion) {
-        1 { crear_usuario }
-        2 { Write-Host "Listando usuarios FTP..."; Get-LocalUser | Where-Object { $_.Name -like "FTP*" } | Format-Table Name, Enabled }
-        3 { Write-Host "Saliendo del menú..."; break }
-        default { Write-Host "Opción no válida. Intente nuevamente." }
-    }
-
-    if ($opcion -ne 3) {
-        Write-Host "Presione Enter para continuar..."
-        Read-Host
-    }
-} while ($opcion -ne 3)
+#do {
+#    Clear-Host
+#    Write-Host "===================================="
+#    Write-Host "          Menú Principal           "
+#    Write-Host "===================================="
+#    Write-Host "1. Crear un nuevo usuario FTP"
+#    Write-Host "2. Listar usuarios FTP"
+#   Write-Host "3. Salir"
+#   Write-Host "===================================="
+#
+#    $opcion = Read-Host "Seleccione una opción (1-3)"
+#
+#    switch ($opcion) {
+#        1 { crear_usuario }
+#       2 { Write-Host "Listando usuarios FTP..."; Get-LocalUser | Where-Object { $_.Name -like "FTP*" } | Format-Table Name, Enabled }
+##       3 { Write-Host "Saliendo del menú..."; break }
+ #       default { Write-Host "Opción no válida. Intente nuevamente." }
+#    }
+#
+ #   if ($opcion -ne 3) {
+ #       Write-Host "Presione Enter para continuar..."
+  #      Read-Host
+#    }
+#} while ($opcion -ne 3)
