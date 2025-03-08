@@ -60,25 +60,47 @@ function Configurar-SSLPolicy {
 }
 
 function ConfigurarPermisosNTFS {
-    $FTPRootDir = "C:\FTP"
-    $FTPUserGroupName = "FTP Usuarios"
-    $FTPSiteName = "FTP"
+    param (
+        [string]$username  # Nombre del usuario que se está creando
+    )
 
-    $UserAccount = New-Object System.Security.Principal.NTAccount("$FTPUserGroupName")
-    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $UserAccount,
-        "ReadAndExecute",
-        "ContainerInherit,ObjectInherit",
-        "None",
-        "Allow"
+    # Directorios
+    $FTPRootDir = "C:\FTP"
+    $UserHomeDir = "C:\FTP\LocalUser\$username"
+    $UserPersonalDir = "$UserHomeDir\$username"
+
+    # Asignar permisos al directorio raíz del FTP para el grupo "FTP Usuarios"
+    $GroupAccount = New-Object System.Security.Principal.NTAccount("FTP Usuarios")
+    $GroupAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $GroupAccount,
+        "ReadAndExecute",  # Permisos de lectura y ejecución
+        "ContainerInherit,ObjectInherit",  # Herencia de permisos
+        "None",  # Propagación de permisos
+        "Allow"  # Tipo de acceso (Allow o Deny)
     )
     $ACL = Get-Acl -Path $FTPRootDir
-    $ACL.SetAccessRule($AccessRule)
-    $ACL | Set-Acl -Path $FTPRootDir
-    Write-Output "Permisos NTFS configurados para el grupo '$FTPUserGroupName' en el directorio '$FTPRootDir'."
+    $ACL.AddAccessRule($GroupAccessRule)
+    Set-Acl -Path $FTPRootDir -AclObject $ACL
+    Write-Output "Permisos NTFS configurados para el grupo 'FTP Usuarios' en el directorio '$FTPRootDir'."
 
-    Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
-    Write-Output "Sitio FTP '$FTPSiteName' reiniciado."
+    # Asignar permisos a la carpeta personal del usuario
+    $UserAccount = New-Object System.Security.Principal.NTAccount("$username")
+    $UserAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $UserAccount,
+        "FullControl",  # Permisos completos
+        "ContainerInherit,ObjectInherit",  # Herencia de permisos
+        "None",  # Propagación de permisos
+        "Allow"  # Tipo de acceso (Allow o Deny)
+    )
+    $ACL = Get-Acl -Path $UserPersonalDir
+    $ACL.SetAccessRuleProtection($true, $false)  # Deshabilitar la herencia de permisos
+    $ACL.AddAccessRule($UserAccessRule)
+    Set-Acl -Path $UserPersonalDir -AclObject $ACL
+    Write-Output "Permisos NTFS configurados para el usuario '$username' en el directorio '$UserPersonalDir'."
+
+    # Reiniciar el sitio FTP
+    Restart-WebItem "IIS:\Sites\FTP" -Verbose
+    Write-Output "Sitio FTP reiniciado."
 }
 
 function crear_usuario {
