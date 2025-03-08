@@ -140,6 +140,16 @@ function crear_usuario {
         return
     }
 
+    # Agregar el usuario al grupo "FTP Usuarios"
+    try {
+        $Group = [ADSI]"WinNT://$env:COMPUTERNAME/FTP Usuarios,group"
+        $Group.Add("WinNT://$env:COMPUTERNAME/$username")
+        Write-Host "Usuario '$username' agregado al grupo 'FTP Usuarios'."
+    } catch {
+        Write-Host "Error al agregar el usuario '$username' al grupo 'FTP Usuarios': $_"
+        return
+    }
+
     # Crear carpetas personales y asignar permisos
     $UserHomeDir = "C:\FTP\LocalUser\$username"
     $UserPublicDir = "$UserHomeDir\publica"
@@ -170,8 +180,19 @@ function crear_usuario {
     } catch {
         Write-Host "Error al crear carpetas o asignar permisos para el usuario '$username': $_"
     }
+
+    # Configurar permisos NTFS para el usuario
+    ConfigurarPermisosNTFS -username $username
 }
-function mostrar_menu {
+
+Crear-SitioFTP
+Crear-GrupoFTP
+Configurar-FTPSite
+Configurar-SSLPolicy
+ConfigurarPermisosNTFS
+
+# Menú principal
+do {
     Clear-Host
     Write-Host "===================================="
     Write-Host "          Menú Principal           "
@@ -180,29 +201,18 @@ function mostrar_menu {
     Write-Host "2. Listar usuarios FTP"
     Write-Host "3. Salir"
     Write-Host "===================================="
-}
 
-
-
-# Ejemplo de uso:
-Crear-SitioFTP
-Crear-GrupoFTP
-Configurar-FTPSite
-Configurar-SSLPolicy
-ConfigurarPermisosNTFS
-
-do {
-    mostrar_menu
-    $opcion = Read-Host "Seleccione una opción (1-4)"
+    $opcion = Read-Host "Seleccione una opción (1-3)"
 
     switch ($opcion) {
         1 { crear_usuario }
-        2 { Write-Host "Saliendo del menú..."; break }
+        2 { Write-Host "Listando usuarios FTP..."; Get-LocalUser | Where-Object { $_.Name -like "FTP*" } | Format-Table Name, Enabled }
+        3 { Write-Host "Saliendo del menú..."; break }
         default { Write-Host "Opción no válida. Intente nuevamente." }
     }
 
-    if ($opcion -ne 4) {
+    if ($opcion -ne 3) {
         Write-Host "Presione Enter para continuar..."
         Read-Host
     }
-} while ($opcion -ne 4)
+} while ($opcion -ne 3)
