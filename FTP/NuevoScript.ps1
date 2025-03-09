@@ -223,7 +223,19 @@ function ConfigurarPermisosNTFS {
         return
     }
 
-    $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+    # Validar que el objeto (usuario/grupo) existe
+    try {
+        $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+        # Intentar traducir el objeto a un SID para validar su existencia
+        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    } catch [System.Security.Principal.IdentityNotMappedException] {
+        Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." 
+        return
+    } catch {
+        Write-Host "Ocurrio un error inesperado al validar el objeto '$Objeto': $_"
+        return
+    }
+
     $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
         $UserAccount, 
         'ReadAndExecute', 
