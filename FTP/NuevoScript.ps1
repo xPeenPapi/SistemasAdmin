@@ -200,6 +200,12 @@ function CambiarGrupoFtp {
     )
 
     try {
+        # Verificar si el usuario existe
+        if (-not (Get-LocalUser -Name $Username -ErrorAction SilentlyContinue)) {
+            Write-Host "El usuario '$Username' no existe. Inténtelo de nuevo."
+            return
+        }
+
         # Verificar si el grupo existe
         if (-not (Get-LocalGroup -Name $nombreGrupo -ErrorAction SilentlyContinue)) {
             Write-Host "El grupo '$nombreGrupo' no existe. Inténtelo de nuevo."
@@ -229,7 +235,7 @@ function CambiarGrupoFtp {
             }
         }
 
-        # Asignar el usuario al nuevo grupo
+        # Asignar el usuario al nuevo grupo (solo si el usuario y el grupo existen)
         Write-Host "Asignando al usuario $Username al grupo $nombreGrupo..."
         Asignar-Grupo -User $Username -nombreGrupo $nombreGrupo -FTPSiteName $FTPSiteName
 
@@ -247,7 +253,6 @@ function CambiarGrupoFtp {
         Write-Host "Error: $_"
     }
 }
-    
 $FTPSiteName = "FTP"
 $FTPRootDir = "C:\FTP\"
 $FTPPort = 21
