@@ -142,26 +142,33 @@ function Asignar-Grupo {
         [String]$nombreGrupo,
         [String]$FTPSiteName
     )
+
+    # Lista de grupos permitidos
+    $gruposPermitidos = @("reprobados", "recursadores")
+
+    # Verificar si el grupo está permitido
+    if ($gruposPermitidos -notcontains $nombreGrupo) {
+        Write-Host "El grupo '$nombreGrupo' no está permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
+        return
+    }
+
     try {
         # Intentar obtener el SID del usuario
         $UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
-        # Mensaje de error si el usuario no existe
         Write-Host "El usuario $Username no fue encontrado."
         return
     } catch {
-        # Mensaje de error para cualquier otra excepción
-        Write-Host "Ocurrio un error inesperado al buscar el usuario $Username : $_"
+        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_"
         return
     }
 
     # Verificar si el grupo existe
     try {
         $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
-        # Verificar si el grupo es válido
         if (-not $Group.Path) {
-            throw "El grupo no es valido."
+            throw "El grupo no es válido."
         }
     } catch {
         Write-Host "El grupo $nombreGrupo no fue encontrado."
@@ -174,7 +181,6 @@ function Asignar-Grupo {
     }
 
     if ($grupos.Count -gt 0) {
-        # Si el usuario ya está en un grupo, mostrar un mensaje y salir
         Write-Host "El usuario $Username ya pertenece al grupo $($grupos[0].Name). No se puede asignar a otro grupo."
         return
     }
@@ -209,7 +215,7 @@ function Asignar-Grupo {
     # Crear enlace simbólico
     try {
         cmd /c mklink /D $UserGroupDir $GroupDir
-        Write-Host "Enlace simbolico creado correctamente en $UserGroupDir."
+        Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
     } catch {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
         return
