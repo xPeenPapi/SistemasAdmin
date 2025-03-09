@@ -82,9 +82,7 @@ function Crear-UsuarioFTP(){
     $CreateUserFTPUser.SetInfo()
     mkdir C:\FTP\LocalUser\$FTPUserName
     mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
-
-
-    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Publica C:\FTP\Publica
+    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\Public
 
 
 
@@ -207,11 +205,11 @@ Configurar-FTPSite $FTPSiteName
 
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
-Crear-GrupoFTP -nombreGrupo "Publica" -descripcion "Grupo Publica"
+Crear-GrupoFTP -nombreGrupo "Public" -descripcion "Grupo Publica"
 
 ConfigurarPermisosNTFS -Objeto "reprobados" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
 ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -Objeto "Publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
+ConfigurarPermisosNTFS -Objeto "Public" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 AislarUsuario $FTPSiteName
 Habilitar-AccesoAnonimo $FTPSiteName
