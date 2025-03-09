@@ -82,6 +82,7 @@ function Crear-UsuarioFTP(){
     $CreateUserFTPUser.SetInfo()
     mkdir C:\FTP\LocalUser\$FTPUserName
     mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
+    mkdir C:\FTP\LocalUser\Public
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
 
 
