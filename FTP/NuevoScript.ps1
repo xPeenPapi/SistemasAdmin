@@ -187,6 +187,9 @@ function AislarUsuario(){
 }
 
 function Habilitar-AccesoAnonimo(){
+    Param(
+        [string]$FTPSiteName
+    )
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
 }
     
