@@ -69,11 +69,11 @@ function Crear-GrupoFTP {
 
 function Crear-UsuarioFTP(){
     Param(
-        [String]$User,
+        [String]$Username,
         [String]$Password
     )
 
-    $FTPUserName = $User
+    $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
     $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
@@ -92,7 +92,7 @@ function Crear-UsuarioFTP(){
 }
 function Asignar-Grupo {
     Param (
-        [String]$User,
+        [String]$Username,
         [String]$nombreGrupo,
         [String]$FTPSiteName
     )
@@ -104,9 +104,9 @@ function Asignar-Grupo {
     $Group.Add($User.Path)
     
 
-    cmd /c mklink /D C:\FTP\LocalUser\$User\$nombreGrupo C:\FTP\$nombreGrupo
+    cmd /c mklink /D C:\FTP\LocalUser\$Username\$nombreGrupo C:\FTP\$nombreGrupo
     
-    $FTPRootDir ="C:\FTP\LocalUser\$User\$nombreGrupo"
+    $FTPRootDir ="C:\FTP\LocalUser\$Username\$nombreGrupo"
     $FtpDir = $FTPRootDir
     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
     
@@ -225,14 +225,14 @@ while($true){
             1 {
                 $User= Read-Host "Ingresa el Usuario"
                 $Password = Read-Host "Ingresa la contraseña del usuario"
-                Crear-UsuarioFTP $User $Password
+                Crear-UsuarioFTP $Username $Password
 
             }
             2 {
             $User= Read-Host "Ingrese el nombre del Usuario asignar"
             $nombreGrupo = Read-Host "Ingrese el nombre del grupo para asignar al usuario"
 
-             Asignar-Grupo $User $nombreGrupo $FTPSiteName
+             Asignar-Grupo $Username $nombreGrupo $FTPSiteName
              ConfigurarPermisosNTFS $nombreGrupo $FTPRootDirLogin $FTPSiteName
             }
         }
