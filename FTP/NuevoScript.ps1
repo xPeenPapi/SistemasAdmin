@@ -37,7 +37,7 @@ function Get-ADSI {
     return [ADSI]"WinNT://$env:ComputerName"
 }
 
-    function Crear-GrupoFTP {
+function Crear-GrupoFTP {
         param(
             [String]$nombreGrupo, 
             [string]$descripcion   
@@ -65,7 +65,7 @@ function Get-ADSI {
         } catch {
             Write-Host "Error: $_"  
         }
-    }
+}
 
 function Crear-UsuarioFTP(){
     Param(
@@ -121,7 +121,7 @@ function Configurar-FTPSite {
         Filter = "system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
-            users = "*"
+            roles = "reprobados","recursadores"
             permissions = 3
         }
         PSPath = 'IIS:\\'
@@ -150,10 +150,10 @@ Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
 }
 
 function ConfigurarPermisosNTFS {
-    Param ([String]$User,[String]$FtpDir,[String]$FtpSiteName)
+    Param ([String]$Objeto,[String]$FTPRootDirLogin,[String]$FtpSite)
 
 
-    $UserAccount = New-Object System.Security.Principal.NTAccount($User)
+    $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
     $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
 
     $ACL = Get-Acl -Path $FtpDir
@@ -187,9 +187,10 @@ Configurar-FTPSite $FTPSiteName
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
 Crear-GrupoFTP -nombreGrupo "publica" -descripcion "Grupo Publica"
-ConfigurarPermisosNTFS -nombreGrupo "reprobados" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -nombreGrupo "recursadores" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName  
+
+ConfigurarPermisosNTFS -nombreGrupo "reprobados" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -nombreGrupo "recursadores" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName  
 
 
 while($true){
