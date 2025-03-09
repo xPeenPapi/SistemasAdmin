@@ -111,14 +111,14 @@ function Asignar-Grupo {
 
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
-
+    
     $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
     $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
 
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
 
     $Param = @{
-        Filter = "system.ftpServer/security/authorization"
+        Filter = "/system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
             roles = "reprobados","recursadores"
@@ -127,7 +127,6 @@ function Configurar-FTPSite {
         PSPath = 'IIS:\\'
     Location = $FTPSiteName
     }
-
 
     Add-WebConfiguration @Param
 
