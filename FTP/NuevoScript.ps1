@@ -431,7 +431,7 @@ while($true){
             1 {
                 $Username = Read-Host "Ingresa el Usuario"
     
-                if (Validar-Username -Username $Username) {
+                if (Validar-Usuario -Username $Username) {
                     $Password = Read-Host "Ingresa la contraseña del usuario"
                     
                     if (Verifica-Password -Password $Password) {
