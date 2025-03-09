@@ -199,14 +199,14 @@ Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
 
 function ConfigurarPermisosNTFS {
     Param (
-        [String]$Objeto,      # Nombre del usuario o grupo
-        [String]$FtpDir,      # Ruta del directorio FTP
-        [String]$FtpSiteName  # Nombre del sitio FTP en IIS
+        [String]$Objeto,      
+        [String]$FtpDir,      
+        [String]$FtpSiteName  
     )
 
     # Validar que el directorio existe
     if (-not (Test-Path $FtpDir)) {
-        Write-Host "El directorio $FtpDir no existe." -ForegroundColor Red
+        Write-Host "El directorio $FtpDir no existe." 
         return
     }
 
@@ -216,10 +216,10 @@ function ConfigurarPermisosNTFS {
         # Intentar traducir el objeto a un SID para validar su existencia
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
-        Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." -ForegroundColor Red
+        Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." 
         return
     } catch {
-        Write-Host "Ocurrió un error inesperado al validar el objeto '$Objeto': $_" -ForegroundColor Red
+        Write-Host "Ocurrió un error inesperado al validar el objeto '$Objeto': $_"
         return
     }
 
@@ -236,18 +236,18 @@ function ConfigurarPermisosNTFS {
         $ACL = Get-Acl -Path $FtpDir
         $ACL.SetAccessRule($AccessRule)
         $ACL | Set-Acl -Path $FtpDir
-        Write-Host "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'." -ForegroundColor Green
+        Write-Host "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'."
     } catch {
-        Write-Host "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_" -ForegroundColor Red
+        Write-Host "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_" 
         return
     }
 
     # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
     try {
         Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
-        Write-Host "El sitio FTP '$FtpSiteName' se reinició correctamente." -ForegroundColor Green
+        Write-Host "El sitio FTP '$FtpSiteName' se reinició correctamente." 
     } catch {
-        Write-Host "No se pudo reiniciar el sitio FTP '$FtpSiteName': $_" -ForegroundColor Red
+        Write-Host "No se pudo reiniciar el sitio FTP '$FtpSiteName': $_" 
     }
 }
     
