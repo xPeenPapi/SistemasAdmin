@@ -97,11 +97,11 @@ function Asignar-Grupo {
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
         # Mensaje de error si el usuario no existe
-        Write-Host "El usuario $Username no fue encontrado." -ForegroundColor Red
+        Write-Host "El usuario $Username no fue encontrado." 
         return
     } catch {
         # Mensaje de error para cualquier otra excepción
-        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_" -ForegroundColor Red
+        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_" 
         return
     }
 
@@ -113,16 +113,36 @@ function Asignar-Grupo {
             throw "El grupo no es válido."
         }
     } catch {
-        Write-Host "El grupo $nombreGrupo no fue encontrado." -ForegroundColor Red
+        Write-Host "El grupo $nombreGrupo no fue encontrado." 
         return
     }
 
-    # Verificar si el usuario ya está en el grupo
+    # Verificar si el usuario ya está en algún grupo
+    $grupos = Get-LocalGroup | Where-Object { 
+        $_ | Get-LocalGroupMember | Where-Object { $_.Name -eq "$env:COMPUTERNAME\$Username" }
+    }
+
+    if ($grupos.Count -gt 0) {
+        # Si el usuario ya está en un grupo, eliminarlo de ese grupo
+        foreach ($grupo in $grupos) {
+            Write-Host "Eliminando al usuario $Username del grupo $($grupo.Name)..."
+            Remove-LocalGroupMember -Group $grupo.Name -Member $Username -ErrorAction Stop
+        }
+
+        # Eliminar el enlace simbólico y la carpeta del grupo anterior
+        $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
+        if (Test-Path $rutaGrupoAnterior) {
+            Write-Host "Eliminando el enlace simbólico y la carpeta del grupo anterior..."
+            Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
+        }
+    }
+
+    # Asignar el usuario al nuevo grupo
     try {
         $User = [ADSI]"WinNT://$SID"
         $Group.Add($User.Path)
     } catch {
-        Write-Host "No se pudo agregar el usuario $Username al grupo $nombreGrupo." -ForegroundColor Red
+        Write-Host "No se pudo agregar el usuario $Username al grupo $nombreGrupo." 
         return
     }
 
@@ -147,7 +167,7 @@ function Asignar-Grupo {
     try {
         cmd /c mklink /D $UserGroupDir $GroupDir
     } catch {
-        Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir." -ForegroundColor Red
+        Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
         return
     }
 
@@ -155,7 +175,6 @@ function Asignar-Grupo {
     $FtpDir = $UserGroupDir
     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
 }
-
 
 
 function Configurar-FTPSite {
