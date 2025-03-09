@@ -2,11 +2,12 @@ Import-Module WebAdministration
 function Crear-SitioFTP(){
 
     Param(
-        [String]$FTPSiteName,
-        [String]$FTPRootDir,
-        [Int]$FTPPort
+
+        [String]$FTPSiteName = "FTP",
+        [String]$FTPRootDir = "C:\FTP\",
+        [Int]$FTPPort = 21
         )
-    New-WebFtpSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir
+    New-WebFTPSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir -Force
     }
     
 function VerificarInstalacionFTP {
@@ -36,20 +37,35 @@ function Get-ADSI {
     return [ADSI]"WinNT://$env:ComputerName"
 }
 
-function Crear-GrupoFTP {
-    param(
-        [String]$nombreGrupo,
-        [string]$descripcion
-    )
-    $FTPUserGroupName = $nombreGrupo
-    $ADSI = Get-ADSI
-    $FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
-    $FTPUserGroup.SetInfo()
-    $FTPUserGroup.Description = "$descripcion"
-    $FTPUserGroup.SetInfo()
-    mkdir C:\FTP\$nombreGrupo
-
-}
+    function Crear-GrupoFTP {
+        param(
+            [String]$nombreGrupo, 
+            [string]$descripcion   
+        )
+        try {
+            $ADSI = Get-ADSI
+    
+            if (-not ([ADSI]::Exists("WinNT://$env:ComputerName/$nombreGrupo,Group"))) {
+                # Crear el grupo si no existe
+                $FTPUserGroup = $ADSI.Create("Group", "$nombreGrupo")  
+                $FTPUserGroup.SetInfo()
+                $FTPUserGroup.Description = $descripcion  
+                $FTPUserGroup.SetInfo()
+                Write-Host "Grupo $nombreGrupo creado correctamente."
+    
+                if (!(Test-Path "C:\FTP\$nombreGrupo")) {
+                    mkdir "C:\FTP\$nombreGrupo"
+                    Write-Host "Carpeta C:\FTP\$nombreGrupo creada correctamente."
+                } else {
+                    Write-Host "La carpeta C:\FTP\$nombreGrupo ya existe."
+                }
+            } else {
+                Write-Host "El grupo $nombreGrupo ya existe."
+            }
+        } catch {
+            Write-Host "Error: $_"  
+        }
+    }
 
 function Crear-UsuarioFTP(){
     Param(
@@ -134,10 +150,10 @@ Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
 }
 
 function ConfigurarPermisosNTFS {
-    Param ([String]$Objeto,[String]$FtpDir,[String]$FtpSiteName)
+    Param ([String]$User,[String]$FtpDir,[String]$FtpSiteName)
 
 
-    $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+    $UserAccount = New-Object System.Security.Principal.NTAccount($User)
     $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
 
     $ACL = Get-Acl -Path $FtpDir
@@ -166,7 +182,7 @@ $FTPPort=21
 $FTPRootDirLogin= "C:\FTP\LocalUser"
 
 
-Crear-SitioFTP -Name $FTPSiteName -PhysicalPath $FTPRootDIR -Port $FTPPort
+Crear-SitioFTP -Name $FTPSiteName -PhysicalPath $FTPRootDir -Port $FTPPort
 
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
@@ -186,7 +202,7 @@ while($true){
     echo "Menu"
     echo "1. Agregar usuario"
     echo "2. Asignar Grupo"
-    echo "2. Cambiar usuario de grupo"
+    echo "3. Cambiar usuario de grupo"
     echo "3. Salir"
 
     try{
