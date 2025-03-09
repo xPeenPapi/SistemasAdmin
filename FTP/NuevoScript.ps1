@@ -191,6 +191,69 @@ function Habilitar-AccesoAnonimo(){
     )
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
 }
+
+function CambiarGrupo-FTP {
+    Param(
+        [String]$Username,
+        [String]$nombreGrupo,
+        [String]$FTPSiteName
+    )
+
+    # Lista de grupos permitidos
+    $gruposPermitidos = @("reprobados", "recursadores")
+
+    try {
+        # Validar que el grupo proporcionado esté en la lista de grupos permitidos
+        if ($gruposPermitidos -notcontains $nombreGrupo) {
+            Write-Error "El grupo '$nombreGrupo' no es válido. Solo se permiten los grupos: $($gruposPermitidos -join ', ')."
+            return
+        }
+
+        # Verificar si el usuario existe
+        if (-not (Get-LocalUser -Name $Username -ErrorAction SilentlyContinue)) {
+            Write-Error "El usuario $Username no existe."
+            return
+        }
+
+        # Obtener los grupos a los que pertenece el usuario
+        $grupos = Get-LocalGroup | Where-Object { $_ | Get-LocalGroupMember | Where-Object { $_.Name -eq $Username } }
+
+        # Verificar si el usuario pertenece a algún grupo
+        if ($grupos.Count -eq 0) {
+            Write-Host "El usuario $Username no pertenece a ningún grupo."
+        } else {
+            # Eliminar al usuario de los grupos actuales
+            foreach ($grupo in $grupos) {
+                Write-Host "Eliminando al usuario $Username del grupo $($grupo.Name)..."
+                Remove-LocalGroupMember -Group $grupo.Name -Member $Username -ErrorAction Stop
+            }
+        }
+
+        # Eliminar el enlace simbólico y la carpeta del grupo anterior
+        $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
+        if (Test-Path $rutaGrupoAnterior) {
+            Write-Host "Eliminando el enlace simbólico y la carpeta del grupo anterior..."
+            Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
+        }
+
+        # Asignar el usuario al nuevo grupo
+        Write-Host "Asignando al usuario $Username al grupo $nombreGrupo..."
+        Asignar-Grupo -User $Username -nombreGrupo $nombreGrupo -FTPSiteName $FTPSiteName
+
+        # Crear el enlace simbólico para el nuevo grupo
+        $rutaNuevoGrupo = "C:\FTP\LocalUser\$Username\$nombreGrupo"
+        if (!(Test-Path $rutaNuevoGrupo)) {
+            Write-Host "Creando enlace simbólico para el nuevo grupo..."
+            cmd /c mklink /D $rutaNuevoGrupo "C:\FTP\$nombreGrupo"
+        } else {
+            Write-Host "El enlace simbólico para el nuevo grupo ya existe."
+        }
+
+        Write-Host "El usuario $Username ha sido asignado al grupo $nombreGrupo correctamente."
+    } catch {
+        Write-Host "Error: $_"
+    }
+}
     
 $FTPSiteName = "FTP"
 $FTPRootDir = "C:\FTP\"
@@ -251,6 +314,11 @@ while($true){
 
              Asignar-Grupo $Username $nombreGrupo $FTPSiteName
              ConfigurarPermisosNTFS $nombreGrupo $FTPRootDirLogin $FTPSiteName
+            }
+            3 {
+                $Username = Read-Host "Ingresa al usuario a cambiar de grupo"
+                $nombreGrupo = Read-Host "Ingresa el nuevo grupo (reprobados o recursadores)"
+                CambiarGrupo-FTP $Username $nombreGrupo $FTPSiteName
             }
         }
     }
