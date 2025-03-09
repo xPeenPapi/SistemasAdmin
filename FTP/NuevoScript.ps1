@@ -101,7 +101,7 @@ function Asignar-Grupo {
         return
     } catch {
         # Mensaje de error para cualquier otra excepción
-        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_"
+        Write-Host "Ocurrio un error inesperado al buscar el usuario $Username : $_"
         return
     }
 
@@ -110,7 +110,7 @@ function Asignar-Grupo {
         $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
         # Verificar si el grupo es válido
         if (-not $Group.Path) {
-            throw "El grupo no es válido."
+            throw "El grupo no es valido."
         }
     } catch {
         Write-Host "El grupo $nombreGrupo no fue encontrado."
@@ -158,7 +158,7 @@ function Asignar-Grupo {
     # Crear enlace simbólico
     try {
         cmd /c mklink /D $UserGroupDir $GroupDir
-        Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
+        Write-Host "Enlace simbolico creado correctamente en $UserGroupDir."
     } catch {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
         return
@@ -232,36 +232,25 @@ function ConfigurarPermisosNTFS {
         Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." 
         return
     } catch {
-        Write-Host "Ocurrió un error inesperado al validar el objeto '$Objeto': $_"
+        Write-Host "Ocurrio un error inesperado al validar el objeto '$Objeto': $_"
         return
     }
 
-    # Configurar permisos NTFS
-    try {
-        $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
-            $UserAccount, 
-            'ReadAndExecute', 
-            'ContainerInherit,ObjectInherit', 
-            'None', 
-            'Allow'
+    $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+        $UserAccount, 
+        'ReadAndExecute', 
+        'ContainerInherit,ObjectInherit', 
+        'None', 
+        'Allow'
         )
 
         $ACL = Get-Acl -Path $FtpDir
         $ACL.SetAccessRule($AccessRule)
         $ACL | Set-Acl -Path $FtpDir
         Write-Host "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'."
-    } catch {
-        Write-Host "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_" 
-        return
-    }
+   
 
-    # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
-    try {
-        Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
-        Write-Host "El sitio FTP '$FtpSiteName' se reinició correctamente." 
-    } catch {
-        Write-Host "No se pudo reiniciar el sitio FTP '$FtpSiteName': $_" 
-    }
+    Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
 }
     
 function Crear_RutaFTP(){
