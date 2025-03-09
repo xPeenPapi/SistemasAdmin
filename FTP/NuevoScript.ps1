@@ -66,7 +66,58 @@ function Crear-GrupoFTP {
             Write-Host "Error: $_"  
         }
 }
+function Verifica-Password() {
+    Param (
+        [String]$Password
+    )
 
+    $longitudMinima = 8
+    $regexMayuscula = "[A-Z]"
+    $regexMinuscula = "[a-z]"
+    $regexNumero = "[0-9]"
+    $regexEspecial = "[!@#$%^&*()\-+=]"
+
+    if ($Password.Length -lt $longitudMinima) {
+        Write-Host "La contraseña debe tener al menos $longitudMinima caracteres."
+        return $false
+    }
+
+    if (-not ($Password -match $regexMayuscula)) {
+        Write-Host "La contraseña debe contener al menos una letra mayuscula."
+        return $false
+    }
+
+    if (-not ($Password -match $regexMinuscula)) {
+        Write-Host "La contraseña debe contener al menos una letra minuscula."
+        return $false
+    }
+
+    if (-not ($Password -match $regexNumero)) {
+        Write-Host "La contraseña debe contener al menos un numero."
+        return $false
+    }
+
+    if (-not ($Password -match $regexEspecial)) {
+        Write-Host "La contraseña debe contener al menos un carácter especial (!@#$%^&*()\-+=)."
+        return $false
+    }
+
+    Write-Host "La contraseña es valida."
+    return $true
+}
+function Validar-Usuario {
+    Param (
+        [String]$Username
+    )
+    $longitudMaxima = 20
+
+    if ($Username.Length -gt $longitudMaxima) {
+        Write-Host "El nombre de usuario no puede superar los $longitudMaxima caracteres."
+        return $false
+    }
+    Write-Host "El nombre de usuario es valido."
+    return $true
+}
 function Crear-UsuarioFTP(){
     Param(
         [String]$Username,
@@ -168,8 +219,6 @@ function Asignar-Grupo {
     $FtpDir = $UserGroupDir
     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
 }
-
-
 
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
@@ -287,7 +336,7 @@ function CambiarGrupoFtp {
     try {
         # Verificar si el usuario existe
         if (-not (Get-LocalUser -Name $Username -ErrorAction SilentlyContinue)) {
-            Write-Host "El usuario '$Username' no existe. Inténtelo de nuevo."
+            Write-Host "El usuario '$Username' no existe. Intentelo de nuevo."
             return
         }
 
@@ -380,10 +429,19 @@ while($true){
     if($intOpcion -is [int]){
         switch($opcion){
             1 {
-                $Username= Read-Host "Ingresa el Usuario"
-                $Password = Read-Host "Ingresa la contraseña del usuario"
-                Crear-UsuarioFTP $Username $Password
-
+                $Username = Read-Host "Ingresa el Usuario"
+    
+                if (Validar-Username -Username $Username) {
+                    $Password = Read-Host "Ingresa la contraseña del usuario"
+                    
+                    if (Verifica-Password -Password $Password) {
+                        Crear-UsuarioFTP -Username $Username -Password $Password
+                    } else {
+                        Write-Host "La contraseña no cumple con los requisitos. No se creara el usuario."
+                    }
+                } else {
+                    Write-Host "El nombre de usuario no es valido. No se creara el usuario."
+                }
             }
             2 {
                 $Username= Read-Host "Ingrese el nombre del Usuario asignar"

@@ -169,7 +169,7 @@ while true; do
             break
             ;;
         *)
-            echo "Opción no válida. Intente de nuevo."
+            echo "Opcion no valida. Intente de nuevo."
             ;;
     esac
 done
