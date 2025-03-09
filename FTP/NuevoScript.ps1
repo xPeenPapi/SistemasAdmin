@@ -7,7 +7,7 @@ function Crear-SitioFTP(){
         [String]$FTPRootDir = "C:\FTP\",
         [Int]$FTPPort = 21
         )
-    New-WebFTPSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir -Force
+    New-WebFtpSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir -Force
     }
     
 function VerificarInstalacionFTP {
@@ -172,28 +172,25 @@ function Crear_RutaFTP(){
         mkdir $RutaFTP
     }
 }
+$FTPSiteName = "FTP"
+$FTPRootDir = "C:\FTP\"
+$FTPPort = 21
+$FTPRootDirLogin = "C:\FTP\LocalUser"
 
 $Ruta = "C:\FTP"
 Crear_RutaFTP $Ruta
 
-$FTPSiteName= "FTP"
-$FTPRootDir= "C:\FTP\"
-$FTPPort=21
-$FTPRootDirLogin= "C:\FTP\LocalUser"
-
-
-Crear-SitioFTP -Name $FTPSiteName -PhysicalPath $FTPRootDir -Port $FTPPort
+Crear-SitioFTP
+VerificarInstalacionFTP
+Configurar-FTPSite $FTPSiteName
 
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
 Crear-GrupoFTP -nombreGrupo "publica" -descripcion "Grupo Publica"
 ConfigurarPermisosNTFS -nombreGrupo "reprobados" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
 ConfigurarPermisosNTFS -nombreGrupo "recursadores" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDirLogin -FTPSiteName $FTPSiteName  
 
-VerificarInstalacionFTP  
-Configurar-FTPSite $FTPSiteName
-Configurar-SSLPolicy 
 
 while($true){
     echo "===================================="
