@@ -97,7 +97,7 @@ function Asignar-Grupo {
         [String]$FTPSiteName
     )
 
-    $UserAccount = New-Object System.Security.Principal.NTAccount("$User")
+    $UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
     $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
     $User = [ADSI]"WinNT://$SID"
