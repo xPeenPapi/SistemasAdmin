@@ -187,7 +187,7 @@ function AislarUsuario(){
 }
 
 function Habilitar-AccesoAnonimo(){
-    Set-ItemProperty "IIS:\Sites\FTP" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
+    Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
 }
     
 $FTPSiteName = "FTP"
@@ -211,7 +211,7 @@ ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $
 ConfigurarPermisosNTFS -Objeto "publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 AislarUsuario $FTPSiteName
-Habilitar-AccesoAnonimo
+Habilitar-AccesoAnonimo $FTPSiteName
 while($true){
     echo "===================================="
     echo "          Menú Principal           "
