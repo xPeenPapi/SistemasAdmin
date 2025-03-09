@@ -285,7 +285,7 @@ while($true){
     echo "1. Agregar usuario"
     echo "2. Asignar Grupo"
     echo "3. Cambiar usuario de grupo"
-    echo "3. Salir"
+    echo "4. Salir"
 
     try{
         $opcion = Read-Host "Selecciona una opcion"
@@ -295,7 +295,7 @@ while($true){
         echo "Valor invalido"
     }
 
-    if($intOpcion -eq 3){
+    if($intOpcion -eq 4){
         echo "Saliendo..."
         break
     }
