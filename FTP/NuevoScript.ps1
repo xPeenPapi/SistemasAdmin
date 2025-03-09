@@ -95,24 +95,31 @@ function Asignar-Grupo {
         [String]$nombreGrupo,
         [String]$FTPSiteName
     )
-
-   try {
+    try {
+        # Intentar obtener el SID del usuario
         $UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
-    } catch {
+    } catch [System.Security.Principal.IdentityNotMappedException] {
         Write-Error "El usuario $Username no fue encontrado."
+        return
+    } catch {
+        Write-Error "Ocurrió un error inesperado al buscar el usuario $Username : $_"
         return
     }
 
     # Verificar si el grupo existe
     try {
         $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
+        # Verificar si el grupo es válido
+        if (-not $Group.Path) {
+            throw "El grupo no es válido."
+        }
     } catch {
         Write-Error "El grupo $nombreGrupo no fue encontrado."
         return
     }
 
-     # Verificar si el usuario ya está en el grupo
+    # Verificar si el usuario ya está en el grupo
     try {
         $User = [ADSI]"WinNT://$SID"
         $Group.Add($User.Path)
@@ -120,6 +127,13 @@ function Asignar-Grupo {
         Write-Error "No se pudo agregar el usuario $Username al grupo $nombreGrupo."
         return
     }
+
+    #$UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
+    #$SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    #$Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
+    #$User = [ADSI]"WinNT://$SID"
+    #$Group.Add($User.Path)
+    
 
     cmd /c mklink /D C:\FTP\LocalUser\$Username\$nombreGrupo C:\FTP\$nombreGrupo
     
