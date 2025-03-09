@@ -197,13 +197,16 @@ Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
 
 }
 
-function ConfigurarPermisosNTFS(){
+function ConfigurarPermisosNTFS {
+    Param (
+        [String]$Objeto,      # Nombre del usuario o grupo
+        [String]$FtpDir,      # Ruta del directorio FTP
+        [String]$FtpSiteName  # Nombre del sitio FTP en IIS
+    )
 
-    Param ([String]$Objeto,[String]$FtpDir,[String]$FtpSiteName)
-    
-       # Validar que el directorio existe
+    # Validar que el directorio existe
     if (-not (Test-Path $FtpDir)) {
-        Write-Error "El directorio $FtpDir no existe."
+        Write-Host "El directorio $FtpDir no existe." -ForegroundColor Red
         return
     }
 
@@ -213,10 +216,10 @@ function ConfigurarPermisosNTFS(){
         # Intentar traducir el objeto a un SID para validar su existencia
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
-        Write-Error "El objeto (usuario o grupo) '$Objeto' no fue encontrado."
+        Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." -ForegroundColor Red
         return
     } catch {
-        Write-Error "Ocurrió un error inesperado al validar el objeto '$Objeto': $_"
+        Write-Host "Ocurrió un error inesperado al validar el objeto '$Objeto': $_" -ForegroundColor Red
         return
     }
 
@@ -233,16 +236,20 @@ function ConfigurarPermisosNTFS(){
         $ACL = Get-Acl -Path $FtpDir
         $ACL.SetAccessRule($AccessRule)
         $ACL | Set-Acl -Path $FtpDir
-        Write-Output "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'."
+        Write-Host "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'." -ForegroundColor Green
     } catch {
-        Write-Error "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_"
+        Write-Host "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_" -ForegroundColor Red
         return
     }
-    
+
     # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
-    Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
-    
+    try {
+        Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
+        Write-Host "El sitio FTP '$FtpSiteName' se reinició correctamente." -ForegroundColor Green
+    } catch {
+        Write-Host "No se pudo reiniciar el sitio FTP '$FtpSiteName': $_" -ForegroundColor Red
     }
+}
     
 function Crear_RutaFTP(){
     Param(
