@@ -84,10 +84,6 @@ function Crear-UsuarioFTP(){
     mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
     mkdir C:\FTP\LocalUser\Public
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
-
-
-
-
 }
 function Asignar-Grupo {
     Param (
@@ -100,10 +96,12 @@ function Asignar-Grupo {
         $UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
-        Write-Error "El usuario $Username no fue encontrado."
+        # Mensaje de error si el usuario no existe
+        Write-Host "El usuario $Username no fue encontrado." -ForegroundColor Red
         return
     } catch {
-        Write-Error "Ocurrió un error inesperado al buscar el usuario $Username : $_"
+        # Mensaje de error para cualquier otra excepción
+        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_" -ForegroundColor Red
         return
     }
 
@@ -115,7 +113,7 @@ function Asignar-Grupo {
             throw "El grupo no es válido."
         }
     } catch {
-        Write-Error "El grupo $nombreGrupo no fue encontrado."
+        Write-Host "El grupo $nombreGrupo no fue encontrado." -ForegroundColor Red
         return
     }
 
@@ -124,43 +122,39 @@ function Asignar-Grupo {
         $User = [ADSI]"WinNT://$SID"
         $Group.Add($User.Path)
     } catch {
-        Write-Error "No se pudo agregar el usuario $Username al grupo $nombreGrupo."
+        Write-Host "No se pudo agregar el usuario $Username al grupo $nombreGrupo." -ForegroundColor Red
         return
     }
 
-    #$UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
-    #$SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
-    #$Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
-    #$User = [ADSI]"WinNT://$SID"
-    #$Group.Add($User.Path)
-     # Crear directorios si no existen
-     $UserDir = "C:\FTP\LocalUser\$Username"
-     $GroupDir = "C:\FTP\$nombreGrupo"
-     $UserGroupDir = "$UserDir\$nombreGrupo"
- 
-     if (-not (Test-Path $UserDir)) {
-         New-Item -ItemType Directory -Path $UserDir
-     }
- 
-     if (-not (Test-Path $GroupDir)) {
-         New-Item -ItemType Directory -Path $GroupDir
-     }
- 
-     if (-not (Test-Path $UserGroupDir)) {
-         New-Item -ItemType Directory -Path $UserGroupDir
-     }
- 
-     try {
-         cmd /c mklink /D $UserGroupDir $GroupDir
-     } catch {
-         Write-Error "No se pudo crear el enlace simbólico en $UserGroupDir."
-         return
-     }
- 
-     $FtpDir = $UserGroupDir
-     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
- }
-    
+    # Crear directorios si no existen
+    $UserDir = "C:\FTP\LocalUser\$Username"
+    $GroupDir = "C:\FTP\$nombreGrupo"
+    $UserGroupDir = "$UserDir\$nombreGrupo"
+
+    if (-not (Test-Path $UserDir)) {
+        New-Item -ItemType Directory -Path $UserDir
+    }
+
+    if (-not (Test-Path $GroupDir)) {
+        New-Item -ItemType Directory -Path $GroupDir
+    }
+
+    if (-not (Test-Path $UserGroupDir)) {
+        New-Item -ItemType Directory -Path $UserGroupDir
+    }
+
+    # Crear enlace simbólico
+    try {
+        cmd /c mklink /D $UserGroupDir $GroupDir
+    } catch {
+        Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir." -ForegroundColor Red
+        return
+    }
+
+    # Configurar permisos NTFS
+    $FtpDir = $UserGroupDir
+    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
+}
 
 
 
