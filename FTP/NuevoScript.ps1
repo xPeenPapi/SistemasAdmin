@@ -181,7 +181,7 @@ $Ruta = "C:\FTP"
 Crear_RutaFTP $Ruta
 
 Crear-SitioFTP
-VerificarInstalacionFTP
+VerificarInstalacionFTP -FeatureName  "Web-Server"
 Configurar-FTPSite $FTPSiteName
 
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
