@@ -223,13 +223,13 @@ while($true){
     if($intOpcion -is [int]){
         switch($opcion){
             1 {
-                $User= Read-Host "Ingresa el Usuario"
+                $Username= Read-Host "Ingresa el Usuario"
                 $Password = Read-Host "Ingresa la contraseña del usuario"
                 Crear-UsuarioFTP $Username $Password
 
             }
             2 {
-            $User= Read-Host "Ingrese el nombre del Usuario asignar"
+            $Username= Read-Host "Ingrese el nombre del Usuario asignar"
             $nombreGrupo = Read-Host "Ingrese el nombre del grupo para asignar al usuario"
 
              Asignar-Grupo $Username $nombreGrupo $FTPSiteName
