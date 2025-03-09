@@ -80,11 +80,14 @@ function Crear-UsuarioFTP(){
     $CreateUserFTPUser.SetInfo()
     $CreateUserFTPUser.SetPassword("$FTPPassword")
     $CreateUserFTPUser.SetInfo()
+    mkdir C:\FTP\LocalUser\$FTPUserName
+    mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
 
-    mkdir C:\FTP\LocalUser\$User
-    mkdir C:\FTP\LocalUser\$User\$User
-    mkdir C:\FTP\LocalUser\$User\Publica
-    cmd /c mklink /D C:\FTP\LocalUser\$User\Publica C:\FTP\Publica
+
+    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Publica C:\FTP\Publica
+
+
+
 
 }
 function Asignar-Grupo {
@@ -100,7 +103,7 @@ function Asignar-Grupo {
     $User = [ADSI]"WinNT://$SID"
     $Group.Add($User.Path)
     
-    
+
     cmd /c mklink /D C:\FTP\LocalUser\$User\$nombreGrupo C:\FTP\$nombreGrupo
     
     $FTPRootDir ="C:\FTP\LocalUser\$User\$nombreGrupo"
@@ -121,7 +124,7 @@ function Configurar-FTPSite {
         Filter = "/system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
-            roles = "reprobados","recursadores"
+            users = "reprobados","recursadores"
             permissions = 3
         }
         PSPath = 'IIS:\\'
@@ -148,21 +151,23 @@ Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
 
 }
 
-function ConfigurarPermisosNTFS {
-    Param ([String]$Objeto,[String]$FTPRootDirLogin,[String]$FtpSite)
+function ConfigurarPermisosNTFS(){
 
-
+    Param ([String]$Objeto,[String]$FtpDir,[String]$FtpSiteName)
+    
+    
     $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
     $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
-
+    
     $ACL = Get-Acl -Path $FtpDir
     $ACL.SetAccessRule($AccessRule)
     $ACL | Set-Acl -Path $FtpDir
-
+    
     # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
     Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
-
-}
+    
+    }
+    
 function Crear_RutaFTP(){
     Param(
         [string]$RutaFTP
@@ -187,9 +192,9 @@ Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
 Crear-GrupoFTP -nombreGrupo "publica" -descripcion "Grupo Publica"
 
-ConfigurarPermisosNTFS -nombreGrupo "reprobados" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -nombreGrupo "recursadores" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -nombreGrupo "publica" -FTPRootDirLogin $FTPRootDir -FTPSiteName $FTPSiteName  
+ConfigurarPermisosNTFS -Objeto "reprobados" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
+ConfigurarPermisosNTFS -Objeto "publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 
 while($true){
