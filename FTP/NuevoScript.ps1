@@ -210,7 +210,7 @@ ConfigurarPermisosNTFS -Objeto "reprobados" -FtpDir $FTPRootDir -FTPSiteName $FT
 ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
 ConfigurarPermisosNTFS -Objeto "publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
-AislarUsuario
+AislarUsuario $FTPSiteName
 Habilitar-AccesoAnonimo
 while($true){
     echo "===================================="
