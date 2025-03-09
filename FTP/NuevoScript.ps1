@@ -107,8 +107,8 @@ function Asignar-Grupo {
     cmd /c mklink /D C:\FTP\LocalUser\$User\$nombreGrupo C:\FTP\$nombreGrupo
     
     $FTPRootDir ="C:\FTP\LocalUser\$User\$nombreGrupo"
-    
-    ConfigurarPermisosNTFS $nombreGrupo $FTPRootDir $FTPSiteName
+    $FtpDir = $FTPRootDir
+    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
     
 }
 
