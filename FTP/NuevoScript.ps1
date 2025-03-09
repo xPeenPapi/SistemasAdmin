@@ -218,6 +218,12 @@ function CambiarGrupo-FTP {
         # Obtener los grupos a los que pertenece el usuario
         $grupos = Get-LocalGroup | Where-Object { $_ | Get-LocalGroupMember | Where-Object { $_.Name -eq $Username } }
 
+        # Verificar si el usuario ya pertenece al nuevo grupo
+        if ($grupos.Name -contains $nombreGrupo) {
+            Write-Host "El usuario $Username ya pertenece al grupo $nombreGrupo."
+            return
+        }
+
         # Verificar si el usuario pertenece a algún grupo
         if ($grupos.Count -eq 0) {
             Write-Host "El usuario $Username no pertenece a ningún grupo."
@@ -227,13 +233,13 @@ function CambiarGrupo-FTP {
                 Write-Host "Eliminando al usuario $Username del grupo $($grupo.Name)..."
                 Remove-LocalGroupMember -Group $grupo.Name -Member $Username -ErrorAction Stop
             }
-        }
 
-        # Eliminar el enlace simbólico y la carpeta del grupo anterior
-        $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
-        if (Test-Path $rutaGrupoAnterior) {
-            Write-Host "Eliminando el enlace simbólico y la carpeta del grupo anterior..."
-            Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
+            # Eliminar el enlace simbólico y la carpeta del grupo anterior
+            $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
+            if (Test-Path $rutaGrupoAnterior) {
+                Write-Host "Eliminando el enlace simbólico y la carpeta del grupo anterior..."
+                Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
+            }
         }
 
         # Asignar el usuario al nuevo grupo
