@@ -124,7 +124,7 @@ function Configurar-FTPSite {
         Filter = "/system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
-            users = "reprobados","recursadores"
+            users = "*"
             permissions = 3
         }
         PSPath = 'IIS:\\'
