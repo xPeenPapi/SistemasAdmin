@@ -176,6 +176,20 @@ function Crear_RutaFTP(){
         mkdir $RutaFTP
     }
 }
+
+function AislarUsuario(){
+    Param (
+        [String]$FTPSiteName
+    )
+    
+    Set-ItemProperty -Path "IIS:\Sites\$FTPSiteName" -Name ftpServer.userisolation.mode -Value 3
+    
+}
+
+function Habilitar-AccesoAnonimo(){
+    Set-ItemProperty "IIS:\Sites\FTP" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
+}
+    
 $FTPSiteName = "FTP"
 $FTPRootDir = "C:\FTP\"
 $FTPPort = 21
