@@ -247,7 +247,6 @@ function ConfigurarPermisosNTFS {
         $ACL = Get-Acl -Path $FtpDir
         $ACL.SetAccessRule($AccessRule)
         $ACL | Set-Acl -Path $FtpDir
-        Write-Host "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'."
    
 
     Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
@@ -309,26 +308,21 @@ function CambiarGrupoFtp {
         } else {
             # Eliminar al usuario de los grupos actuales
             foreach ($grupo in $grupos) {
-                Write-Host "Eliminando al usuario $Username del grupo $($grupo.Name)..."
                 Remove-LocalGroupMember -Group $grupo.Name -Member $Username -ErrorAction Stop
             }
 
             # Eliminar el enlace simbólico y la carpeta del grupo anterior
             $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
             if (Test-Path $rutaGrupoAnterior) {
-                Write-Host "Eliminando el enlace simbólico y la carpeta del grupo anterior..."
                 Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
             }
         }
 
-        # Asignar el usuario al nuevo grupo (solo si el usuario y el grupo existen)
-        Write-Host "Asignando al usuario $Username al grupo $nombreGrupo..."
         Asignar-Grupo -User $Username -nombreGrupo $nombreGrupo -FTPSiteName $FTPSiteName
 
         # Crear el enlace simbólico para el nuevo grupo
         $rutaNuevoGrupo = "C:\FTP\LocalUser\$Username\$nombreGrupo"
         if (!(Test-Path $rutaNuevoGrupo)) {
-            Write-Host "Creando enlace simbólico para el nuevo grupo..."
             cmd /c mklink /D $rutaNuevoGrupo "C:\FTP\$nombreGrupo"
         } else {
             Write-Host "El enlace simbólico para el nuevo grupo ya existe."
@@ -363,7 +357,7 @@ AislarUsuario $FTPSiteName
 Habilitar-AccesoAnonimo $FTPSiteName
 while($true){
     echo "===================================="
-    echo "          Menú Principal           "
+    echo "          Mene Principal           "
     echo "===================================="
     echo "Menu"
     echo "1. Agregar usuario"
