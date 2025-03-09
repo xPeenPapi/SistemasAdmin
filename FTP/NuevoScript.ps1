@@ -133,15 +133,36 @@ function Asignar-Grupo {
     #$Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
     #$User = [ADSI]"WinNT://$SID"
     #$Group.Add($User.Path)
+     # Crear directorios si no existen
+     $UserDir = "C:\FTP\LocalUser\$Username"
+     $GroupDir = "C:\FTP\$nombreGrupo"
+     $UserGroupDir = "$UserDir\$nombreGrupo"
+ 
+     if (-not (Test-Path $UserDir)) {
+         New-Item -ItemType Directory -Path $UserDir
+     }
+ 
+     if (-not (Test-Path $GroupDir)) {
+         New-Item -ItemType Directory -Path $GroupDir
+     }
+ 
+     if (-not (Test-Path $UserGroupDir)) {
+         New-Item -ItemType Directory -Path $UserGroupDir
+     }
+ 
+     try {
+         cmd /c mklink /D $UserGroupDir $GroupDir
+     } catch {
+         Write-Error "No se pudo crear el enlace simbólico en $UserGroupDir."
+         return
+     }
+ 
+     $FtpDir = $UserGroupDir
+     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
+ }
     
 
-    cmd /c mklink /D C:\FTP\LocalUser\$Username\$nombreGrupo C:\FTP\$nombreGrupo
-    
-    $FTPRootDir ="C:\FTP\LocalUser\$Username\$nombreGrupo"
-    $FtpDir = $FTPRootDir
-    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
-    
-}
+
 
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
@@ -186,13 +207,43 @@ function ConfigurarPermisosNTFS(){
 
     Param ([String]$Objeto,[String]$FtpDir,[String]$FtpSiteName)
     
-    
-    $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
-    $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount, 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
-    
-    $ACL = Get-Acl -Path $FtpDir
-    $ACL.SetAccessRule($AccessRule)
-    $ACL | Set-Acl -Path $FtpDir
+       # Validar que el directorio existe
+    if (-not (Test-Path $FtpDir)) {
+        Write-Error "El directorio $FtpDir no existe."
+        return
+    }
+
+    # Validar que el objeto (usuario/grupo) existe
+    try {
+        $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+        # Intentar traducir el objeto a un SID para validar su existencia
+        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    } catch [System.Security.Principal.IdentityNotMappedException] {
+        Write-Error "El objeto (usuario o grupo) '$Objeto' no fue encontrado."
+        return
+    } catch {
+        Write-Error "Ocurrió un error inesperado al validar el objeto '$Objeto': $_"
+        return
+    }
+
+    # Configurar permisos NTFS
+    try {
+        $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $UserAccount, 
+            'ReadAndExecute', 
+            'ContainerInherit,ObjectInherit', 
+            'None', 
+            'Allow'
+        )
+
+        $ACL = Get-Acl -Path $FtpDir
+        $ACL.SetAccessRule($AccessRule)
+        $ACL | Set-Acl -Path $FtpDir
+        Write-Output "Permisos NTFS configurados correctamente para '$Objeto' en '$FtpDir'."
+    } catch {
+        Write-Error "No se pudieron configurar los permisos NTFS para '$Objeto' en '$FtpDir': $_"
+        return
+    }
     
     # Reiniciar el sitio FTP para que todos los cambios tengan efecto.
     Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
