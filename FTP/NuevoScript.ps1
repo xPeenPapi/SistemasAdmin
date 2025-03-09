@@ -204,11 +204,11 @@ Configurar-FTPSite $FTPSiteName
 
 Crear-GrupoFTP -nombreGrupo "reprobados" -descripcion "Grupo Reprobados"
 Crear-GrupoFTP -nombreGrupo "recursadores" -descripcion "Grupo Recursadores"
-Crear-GrupoFTP -nombreGrupo "publica" -descripcion "Grupo Publica"
+Crear-GrupoFTP -nombreGrupo "Publica" -descripcion "Grupo Publica"
 
 ConfigurarPermisosNTFS -Objeto "reprobados" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
 ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName
-ConfigurarPermisosNTFS -Objeto "publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
+ConfigurarPermisosNTFS -Objeto "Publica" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 AislarUsuario $FTPSiteName
 Habilitar-AccesoAnonimo $FTPSiteName
