@@ -133,8 +133,15 @@ function Crear-UsuarioFTP(){
     $CreateUserFTPUser.SetInfo()
     mkdir C:\FTP\LocalUser\$FTPUserName
     mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
-    mkdir C:\FTP\LocalUser\Public
+    if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
+        mkdir C:\FTP\LocalUser\Public
+    } else {
+        Write-Host "La carpeta Public ya existes"
+    }
+
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
+    $UserAccount = "$env:COMPUTERNAME\$FTPUserName"
+    icacls "C:\FTP\LocalUser\$FTPUserName\$FTPUserName" /inheritance:r /grant:r "$UserAccount :(OI)(CI)F"
 }
 function Asignar-Grupo {
     Param (
@@ -143,17 +150,14 @@ function Asignar-Grupo {
         [String]$FTPSiteName
     )
 
-    # Lista de grupos permitidos
     $gruposPermitidos = @("reprobados", "recursadores")
 
-    # Verificar si el grupo está permitido
     if ($gruposPermitidos -notcontains $nombreGrupo) {
         Write-Host "El grupo '$nombreGrupo' no está permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
         return
     }
 
     try {
-        # Intentar obtener el SID del usuario
         $UserAccount = New-Object System.Security.Principal.NTAccount("$Username")
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
@@ -195,7 +199,6 @@ function Asignar-Grupo {
         return
     }
 
-    # Crear directorios si no existen
     $UserDir = "C:\FTP\LocalUser\$Username"
     $GroupDir = "C:\FTP\$nombreGrupo"
     $UserGroupDir = "$UserDir\$nombreGrupo"
@@ -212,7 +215,6 @@ function Asignar-Grupo {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
 
-    # Crear enlace simbólico
     try {
         cmd /c mklink /D $UserGroupDir $GroupDir
         Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
@@ -220,7 +222,8 @@ function Asignar-Grupo {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
         return
     }
-
+    $GroupAccount = "$env:COMPUTERNAME\$nombreGrupo"
+    icacls $GroupDir /inheritance:r /grant:r "$GroupAccount :(OI)(CI)M"
     # Configurar permisos NTFS
     $FtpDir = $UserGroupDir
     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
@@ -281,7 +284,6 @@ function ConfigurarPermisosNTFS {
     # Validar que el objeto (usuario/grupo) existe
     try {
         $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
-        # Intentar traducir el objeto a un SID para validar su existencia
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
     } catch [System.Security.Principal.IdentityNotMappedException] {
         Write-Host "El objeto (usuario o grupo) '$Objeto' no fue encontrado." 
