@@ -199,7 +199,7 @@ function Asignar-Grupo {
 
     $UserDir = "C:\FTP\LocalUser\$Username"
     $GroupDir = "C:\FTP\$nombreGrupo"
-    $UserGroupDir = "$UserDir\$nombreGrupo"
+    $UserGroupDir = "C:\FTP\LocalUser\$Username\$nombreGrupo"
 
     if (-not (Test-Path $UserDir)) {
         New-Item -ItemType Directory -Path $UserDir
@@ -212,22 +212,26 @@ function Asignar-Grupo {
     if (-not (Test-Path $UserGroupDir)) {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
-
-    try {
-        if (Test-Path $UserGroupDir) {
-            Remove-Item -Path $UserGroupDir -Force -Recurse
+    # Check if the symbolic link already exists
+    if (Test-Path $UserGroupDir) {
+        try {
+            # Remove the existing symbolic link
+            Remove-Item -Path $UserGroupDir -Force
+            Write-Host "El enlace simbólico existente en $UserGroupDir ha sido removido."
+        } catch {
+            Write-Host "No se pudo eliminar el enlace simbólico en $UserGroupDir : $_"
+            return
         }
+    }
+
+    # Create the symbolic link
+    try {
         New-Item -ItemType SymbolicLink -Path $UserGroupDir -Target $GroupDir
         Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
     } catch {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir : $_"
         return
     }
-
-
-    # Configurar permisos NTFS
-    $FtpDir = $UserGroupDir
-    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
 }
 
 function Configurar-FTPSite {
