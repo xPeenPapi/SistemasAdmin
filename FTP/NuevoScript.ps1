@@ -140,6 +140,7 @@ function Crear-UsuarioFTP(){
     }
 
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
+
     $UserAccount = "$env:COMPUTERNAME\$FTPUserName"
     icacls "C:\FTP\LocalUser\$FTPUserName\$FTPUserName" /inheritance:r /grant:r "$UserAccount :(OI)(CI)F"
 }
@@ -222,10 +223,9 @@ function Asignar-Grupo {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
         return
     }
-    $GroupAccount = "$env:COMPUTERNAME\$nombreGrupo"
-    icacls $GroupDir /inheritance:r /grant:r "$GroupAccount :(OI)(CI)M"
+
     # Configurar permisos NTFS
-    $FtpDir = $UserGroupDir
+    $FtpDir = $GroupDir
     ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
 }
 
