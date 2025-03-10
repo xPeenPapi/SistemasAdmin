@@ -138,9 +138,67 @@ function Crear-UsuarioFTP(){
     } else {
         Write-Host "La carpeta Public ya existes"
     }
+    
+    $SubCarpetaUsuario = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
+    ConfigurarPermisosPersonales -Usuario $FTPUserName -CarpetaUsuario $SubCarpetaUsuario
 
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
 
+}
+function ConfigurarPermisosPersonales {
+    Param (
+        [String]$Usuario,          # Nombre del usuario
+        [String]$CarpetaUsuario    # Ruta de la carpeta personal del usuario
+    )
+
+    # Validar que el directorio existe
+    if (-not (Test-Path $CarpetaUsuario)) {
+        Write-Host "El directorio $CarpetaUsuario no existe."
+        return
+    }
+
+    # Validar que el usuario existe
+    try {
+        $UserAccount = New-Object System.Security.Principal.NTAccount($Usuario)
+        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    } catch [System.Security.Principal.IdentityNotMappedException] {
+        Write-Host "El usuario '$Usuario' no fue encontrado."
+        return
+    } catch {
+        Write-Host "Ocurrió un error inesperado al validar el usuario '$Usuario': $_"
+        return
+    }
+
+    # Obtener la ACL actual del directorio
+    $ACL = Get-Acl -Path $CarpetaUsuario
+
+    # Bloquear la herencia de permisos y eliminar permisos heredados
+    $ACL.SetAccessRuleProtection($true, $false)
+
+    # Eliminar todos los permisos existentes (excepto los del sistema y administradores)
+    $ACL.Access | ForEach-Object {
+        if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
+            $ACL.RemoveAccessRule($_)
+        }
+    }
+
+    # Crear la regla de acceso para el usuario
+    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $UserAccount,                              # Cuenta del usuario
+        "FullControl",                             # Permisos: "FullControl" permite control total
+        "ContainerInherit, ObjectInherit",         # Heredar a subcarpetas y archivos
+        "None",                                    # No propagar
+        "Allow"                                    # Tipo de permiso: Permitir
+    )
+
+    # Agregar la regla de acceso a la ACL
+    $ACL.SetAccessRule($AccessRule)
+
+    # Establecer al usuario como propietario de la carpeta
+    $ACL.SetOwner($UserAccount)
+    Set-Acl -Path $CarpetaUsuario -AclObject $ACL
+
+    Write-Host "Permisos personales configurados correctamente para el usuario '$Usuario' en '$CarpetaUsuario'."
 }
 function Asignar-Grupo {
     Param (
