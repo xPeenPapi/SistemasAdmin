@@ -278,7 +278,7 @@ function Asignar-Grupo {
     $FtpDir = $UserGroupDir
     ConfigurarPermisosGrupo $nombreGrupo $FtpDir $FTPSiteName
 
-    cmd /c mklink /D C:\FTP\LocalUser\$Username\$nombreGrupo C:\FTP\$nombreGrupo
+    cmd /c mklink /D "C:\FTP\LocalUser\$Username\$nombreGrupo" "C:\FTP\$nombreGrupo"
 }
 function ConfigurarPermisosGrupo {
     Param (
