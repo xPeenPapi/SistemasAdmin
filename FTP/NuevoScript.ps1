@@ -506,8 +506,7 @@ while($true){
                 } else {
                     Write-Host "El nombre de usuario no es valido. No se creara el usuario."
                 }
-                $UserAccount = "$env:COMPUTERNAME\$FTPUserName"
-                icacls "C:\FTP\LocalUser\$FTPUserName\$FTPUserName" /inheritance:r /grant:r "$UserAccount :(OI)(CI)F"
+
             }
             2 {
                 $Username= Read-Host "Ingrese el nombre del Usuario asignar"
