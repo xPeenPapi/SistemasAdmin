@@ -261,6 +261,92 @@ function Configurar-FTPSite {
     Configurar-SSLPolicy $FTPSitePath
     }
 
+function Configurar-FTPReprobados {
+    Param ([String]$FTPSiteName)
+        
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+    
+    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+    
+    $Param = @{
+        Filter = "/system.ftpServer/security/authorization"
+        Value = @{
+            accessType = "Allow"
+            roles = "reprobados"
+            permissions = 3
+        }
+        PSPath = 'IIS:\\'
+        Location = "C:\FTP\LocalUser\Public"
+    }
+    
+        Add-WebConfiguration @Param
+}  
+function Configurar-FTPRecursadores {
+    Param ([String]$FTPSiteName)
+        
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+    
+    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+    
+    $Param = @{
+        Filter = "/system.ftpServer/security/authorization"
+        Value = @{
+            accessType = "Allow"
+            roles = "recursadores"
+            permissions = 3
+        }
+        PSPath = 'IIS:\\'
+        Location = "C:\FTP\LocalUser\Public"
+    }
+    
+        Add-WebConfiguration @Param
+}    
+
+function Configurar-FTPRecursadoresFolder {
+    Param ([String]$FTPSiteName)
+        
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+    
+    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+    
+    $Param = @{
+        Filter = "/system.ftpServer/security/authorization"
+        Value = @{
+            accessType = "Allow"
+            roles = "recursadores"
+            permissions = 3
+        }
+        PSPath = 'IIS:\\'
+        Location = "C:\FTP\recursadores"
+    }
+    
+        Add-WebConfiguration @Param
+}    
+
+function Configurar-FTPReprobadosFolder {
+    Param ([String]$FTPSiteName)
+        
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+    
+    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+    
+    $Param = @{
+        Filter = "/system.ftpServer/security/authorization"
+        Value = @{
+            accessType = "Allow"
+            roles = "reprobados"
+            permissions = 3
+        }
+        PSPath = 'IIS:\\'
+        Location = "C:\FTP\reprobados"
+    }
+    
+        Add-WebConfiguration @Param
+}    
 
 function Configurar-SSLPolicy {
     Param ([String]$FTPSitePath)
