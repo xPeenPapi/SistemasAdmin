@@ -359,20 +359,6 @@ function Habilitar-AccesoAnonimo {
     )
     # Habilitar autenticación anónima
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
-
-    # Configurar reglas de autorización para usuarios anónimos (solo lectura)
-    $ParamAnon = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            users = "?"
-            permissions = 1  # Solo lectura (1 = Read, 2 = Write, 3 = Read/Write)
-        }
-        PSPath = 'IIS:\\'
-        Location = $FTPSiteName
-    }
-
-    Add-WebConfiguration @ParamAnon
     Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
 
 }
