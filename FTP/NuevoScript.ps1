@@ -433,8 +433,6 @@ function CambiarGrupoFtp {
     }
 }
 
-Habilitar-AccesoAnonimo $FTPSiteName
-Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
 $FTPSiteName = "FTP"
 $FTPRootDir = "C:\FTP\"
 $FTPPort = 21
@@ -456,7 +454,7 @@ ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $
 ConfigurarPermisosNTFS -Objeto "Public" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 AislarUsuario $FTPSiteName
-
+Habilitar-AccesoAnonimo $FTPSiteName
 
 while($true){
     echo "===================================="
