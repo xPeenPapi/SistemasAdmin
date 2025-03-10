@@ -241,9 +241,6 @@ function Asignar-Grupo {
         # Otorgar permisos completos al grupo en la carpeta del grupo
         icacls $GroupDir /grant "$env:COMPUTERNAME\$nombreGrupo :(OI)(CI)F"
 
-        # Denegar permisos a todos los demás usuarios
-        icacls $GroupDir /deny "Todos:(OI)(CI)F"
-
         Write-Host "Permisos NTFS configurados correctamente para el grupo $nombreGrupo en $GroupDir."
     } catch {
         Write-Host "Error al configurar los permisos NTFS para el grupo $nombreGrupo en $GroupDir : $_"
