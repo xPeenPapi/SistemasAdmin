@@ -141,11 +141,6 @@ function Crear-UsuarioFTP(){
     $PublicDir = "C:\FTP\LocalUser\Public"
     $UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
 
-    icacls $PublicDir /inheritance:r
-
-    icacls $PublicDir /grant "Todos:(OI)(CI)R"
-
-    icacls $PublicDir /deny "Todos:(OI)(CI)W"
     
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
    
@@ -378,6 +373,8 @@ function Habilitar-AccesoAnonimo {
     }
 
     Add-WebConfiguration @ParamAnon
+    Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
+
 }
 function CambiarGrupoFtp {
     Param(
@@ -435,6 +432,9 @@ function CambiarGrupoFtp {
         Write-Host "Error: $_"
     }
 }
+
+Habilitar-AccesoAnonimo $FTPSiteName
+Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
 $FTPSiteName = "FTP"
 $FTPRootDir = "C:\FTP\"
 $FTPPort = 21
@@ -456,8 +456,7 @@ ConfigurarPermisosNTFS -Objeto "recursadores" -FtpDir $FTPRootDir -FTPSiteName $
 ConfigurarPermisosNTFS -Objeto "Public" -FtpDir $FTPRootDir -FTPSiteName $FTPSiteName  
 
 AislarUsuario $FTPSiteName
-Habilitar-AccesoAnonimo $FTPSiteName
-Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
+
 
 while($true){
     echo "===================================="
