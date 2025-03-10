@@ -410,7 +410,6 @@ function ConfigurarPermisosNTFS {
         $ACL | Set-Acl -Path $FtpDir
    
 
-    Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
 }
     
 function Crear_RutaFTP(){
