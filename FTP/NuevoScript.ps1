@@ -359,7 +359,6 @@ function Habilitar-AccesoAnonimo {
     )
     # Habilitar autenticación anónima
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
-    Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
 
 }
 function CambiarGrupoFtp {
