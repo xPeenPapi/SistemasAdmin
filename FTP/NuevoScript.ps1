@@ -127,19 +127,89 @@ function Crear-UsuarioFTP(){
     $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
+
+    # Crear el usuario si no existe
     $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
     $CreateUserFTPUser.SetInfo()
     $CreateUserFTPUser.SetPassword("$FTPPassword")
     $CreateUserFTPUser.SetInfo()
-    mkdir C:\FTP\LocalUser\$FTPUserName
-    mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
+
+    # Crear directorios para el usuario
+    $userDir = "C:\FTP\LocalUser\$FTPUserName"
+    $userPersonalDir = "$userDir\$FTPUserName"
+
+    mkdir $userDir
+    mkdir $userPersonalDir
+
+    # Crear el directorio público si no existe
     if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
         mkdir C:\FTP\LocalUser\Public
     } else {
         Write-Host "La carpeta Public ya existe. No se creará nuevamente."
     }
 
-    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
+    # Crear el enlace simbólico
+    cmd /c mklink /D "$userDir\Public" "C:\FTP\LocalUser\Public"
+
+    # Configurar permisos NTFS para el usuario
+    ConfigurarPermisosUsuario -Objeto $FTPUserName -FtpDir $userPersonalDir
+}
+function ConfigurarPermisosUsuario {
+    Param (
+        [String]$Objeto,      
+        [String]$FtpDir      
+    )
+
+    # Validar que el directorio existe
+    if (-not (Test-Path $FtpDir)) {
+        Write-Host "El directorio $FtpDir no existe." 
+        return
+    }
+
+    # Obtener el objeto del usuario
+    try {
+        $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    } catch {
+        Write-Host "El objeto (usuario) '$Objeto' no fue encontrado." 
+        return
+    }
+
+    # Obtener la ACL actual del directorio
+    $ACL = Get-Acl -Path $FtpDir
+
+    # Crear reglas de acceso
+    $UserAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $UserAccount, 
+        'FullControl', 
+        'ContainerInherit,ObjectInherit', 
+        'None', 
+        'Allow'
+    )
+
+    $AdminAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Administrators", 
+        'FullControl', 
+        'ContainerInherit,ObjectInherit', 
+        'None', 
+        'Allow'
+    )
+
+    $DenyRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "Everyone", 
+        'ReadAndExecute', 
+        'ContainerInherit,ObjectInherit', 
+        'None', 
+        'Deny'
+    )
+
+    # Aplicar las reglas de acceso
+    $ACL.SetAccessRule($UserAccessRule)
+    $ACL.SetAccessRule($AdminAccessRule)
+    $ACL.SetAccessRule($DenyRule)
+
+    # Aplicar la ACL actualizada al directorio
+    Set-Acl -Path $FtpDir -AclObject $ACL
 }
 function Asignar-Grupo {
     Param (
@@ -212,10 +282,8 @@ function Asignar-Grupo {
     if (-not (Test-Path $UserGroupDir)) {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
-    # Check if the symbolic link already exists
     if (Test-Path $UserGroupDir) {
         try {
-            # Remove the existing symbolic link
             Remove-Item -Path $UserGroupDir -Force
             Write-Host "El enlace simbólico existente en $UserGroupDir ha sido removido."
         } catch {
@@ -224,7 +292,6 @@ function Asignar-Grupo {
         }
     }
 
-    # Create the symbolic link
     try {
         New-Item -ItemType SymbolicLink -Path $UserGroupDir -Target $GroupDir
         Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
@@ -232,6 +299,7 @@ function Asignar-Grupo {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir : $_"
         return
     }
+        
 }
 
 function Configurar-FTPSite {
