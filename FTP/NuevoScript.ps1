@@ -109,13 +109,26 @@ function Validar-Usuario {
     Param (
         [String]$Username
     )
+    
+    $longitudMinima = 4
     $longitudMaxima = 20
 
-    if ($Username.Length -gt $longitudMaxima) {
-        Write-Host "El nombre de usuario no puede superar los $longitudMaxima caracteres."
+    if ([string]::IsNullOrEmpty($Username)) {
+        Write-Host "El nombre de usuario no puede estar vacío."
         return $false
     }
-    Write-Host "El nombre de usuario es valido."
+
+    if ($Username.Length -lt $longitudMinima -or $Username.Length -gt $longitudMaxima) {
+        Write-Host "El nombre de usuario debe tener entre $longitudMinima y $longitudMaxima caracteres."
+        return $false
+    }
+
+    if (-not ($Username -match '^[a-zA-Z0-9]+$')) {
+        Write-Host "El nombre de usuario solo puede contener caracteres alfanuméricos."
+        return $false
+    }
+
+    Write-Host "El nombre de usuario es válido."
     return $true
 }
 function Crear-UsuarioFTP(){
@@ -367,13 +380,11 @@ function ConfigurarPermisosNTFS {
         [String]$FtpDir,      
         [String]$FtpSiteName  
     )
-
     # Validar que el directorio existe
     if (-not (Test-Path $FtpDir)) {
         Write-Host "El directorio $FtpDir no existe." 
         return
     }
-
     # Validar que el objeto (usuario/grupo) existe
     try {
         $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
@@ -440,13 +451,11 @@ function CambiarGrupoFtp {
             Write-Host "El usuario '$Username' no existe. Intentelo de nuevo."
             return
         }
-
         # Verificar si el grupo existe
         if (-not (Get-LocalGroup -Name $nombreGrupo -ErrorAction SilentlyContinue)) {
             Write-Host "El grupo '$nombreGrupo' no existe. Inténtelo de nuevo."
             return
         }
-
         # Obtener los grupos a los que pertenece el usuario
         $grupos = Get-LocalGroup | Where-Object { 
             $_ | Get-LocalGroupMember | Where-Object { $_.Name -eq "$env:COMPUTERNAME\$Username" }
@@ -467,9 +476,7 @@ function CambiarGrupoFtp {
                 Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
             }
         }
-
         Asignar-Grupo -User $Username -nombreGrupo $nombreGrupo -FTPSiteName $FTPSiteName
-
         # Crear el enlace simbólico para el nuevo grupo
         $rutaNuevoGrupo = "C:\FTP\LocalUser\$Username\$nombreGrupo"
         if (!(Test-Path $rutaNuevoGrupo)) {

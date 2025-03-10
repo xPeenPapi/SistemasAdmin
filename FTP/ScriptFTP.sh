@@ -24,7 +24,7 @@ validar_usuario() {
 validar_contraseña() {
     local password="$1"
     if [[ -z "$password" ]]; then
-        echo "La contraseña no puede estar vacía."
+        echo "La contraseña no puede estar vacia."
         return 1
     fi
     if [[ "${#password}" -gt 8 ]]; then
