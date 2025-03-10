@@ -273,13 +273,8 @@ function Asignar-Grupo {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
 
-    try {
-        cmd /c mklink /D $UserGroupDir $GroupDir
-        Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
-    } catch {
-        Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir."
-        return
-    }
+    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\$nombreGrupo C:\FTP\LocalUser\$nombreGrupo
+
 
     # Configurar permisos NTFS
     $FtpDir = $UserGroupDir
