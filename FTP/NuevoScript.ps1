@@ -131,32 +131,61 @@ function Validar-Usuario {
     Write-Host "El nombre de usuario es válido."
     return $true
 }
-function Crear-UsuarioFTP(){
+function Crear-UsuarioFTP {
     Param(
         [String]$Username,
         [String]$Password
     )
 
+    # Validar el nombre de usuario
+    if (-not (Validar-Usuario -Username $Username)) {
+        Write-Host "El nombre de usuario no es válido. No se creará el usuario."
+        return
+    }
+
+    # Validar la contraseña
+    if (-not (Verifica-Password -Password $Password)) {
+        Write-Host "La contraseña no cumple con los requisitos. No se creará el usuario."
+        return
+    }
+
+    # Si el nombre de usuario y la contraseña son válidos, proceder a crear el usuario
     $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
-    $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
-    $CreateUserFTPUser.SetInfo()
-    $CreateUserFTPUser.SetPassword("$FTPPassword")
-    $CreateUserFTPUser.SetInfo()
-    mkdir C:\FTP\LocalUser\$FTPUserName
-    mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
-    if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
-        mkdir C:\FTP\LocalUser\Public
-    } else {
-        Write-Host "La carpeta Public ya existe. No se creará nuevamente."
+
+    try {
+        # Crear el usuario
+        $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
+        $CreateUserFTPUser.SetInfo()
+
+        # Establecer la contraseña
+        $CreateUserFTPUser.SetPassword("$FTPPassword")
+        $CreateUserFTPUser.SetInfo()
+
+        # Crear directorios para el usuario
+        mkdir C:\FTP\LocalUser\$FTPUserName -ErrorAction Stop
+        mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName -ErrorAction Stop
+
+        # Crear la carpeta Public si no existe
+        if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
+            mkdir C:\FTP\LocalUser\Public -ErrorAction Stop
+        } else {
+            Write-Host "La carpeta Public ya existe. No se creará nuevamente."
+        }
+
+        cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
+
+        Write-Host "Usuario $FTPUserName creado correctamente."
+    } catch {
+        Write-Host "Error al crear el usuario o directorios: $_"
+        try {
+            $ADSI.Delete("User", "$FTPUserName")
+            Write-Host "El usuario $FTPUserName fue eliminado debido a un error."
+        } catch {
+            Write-Host "No se pudo eliminar el usuario $FTPUserName."
+        }
     }
-    #$PublicDir = "C:\FTP\LocalUser\Public"
-    #$UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
-
-    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
-   
-
 }
 function Asignar-Grupo {
     Param (
@@ -545,17 +574,9 @@ while($true){
             1 {
                 $Username = Read-Host "Ingresa el Usuario"
     
-                if (Validar-Usuario -Username $Username) {
-                    $Password = Read-Host "Ingresa la contraseña del usuario"
+                $Password = Read-Host "Ingresa la contraseña del usuario"
                     
-                    if (Verifica-Password -Password $Password) {
-                        Crear-UsuarioFTP -Username $Username -Password $Password
-                    } else {
-                        Write-Host "La contraseña no cumple con los requisitos. No se creara el usuario."
-                    }
-                } else {
-                    Write-Host "El nombre de usuario no es valido. No se creara el usuario."
-                }
+                Crear-UsuarioFTP -Username $Username -Password $Password
             }
             2 {
                 $Username= Read-Host "Ingrese el nombre del Usuario asignar"
