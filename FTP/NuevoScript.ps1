@@ -140,14 +140,16 @@ function Crear-UsuarioFTP(){
     }
     
     $SubCarpetaUsuario = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
-    ConfigurarPermisosPersonales -Usuario $FTPUserName -CarpetaUsuario $SubCarpetaUsuario
+    ConfigurarPermisos700 -Usuario $FTPUserName -CarpetaUsuario $SubCarpetaUsuario
 
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
 
 }
-function ConfigurarPermisosPersonales {
+
+
+function ConfigurarPermisos700 {
     Param (
-        [String]$Usuario,          # Nombre del usuario
+        [String]$Usuario,          # Nombre del usuario propietario
         [String]$CarpetaUsuario    # Ruta de la carpeta personal del usuario
     )
 
@@ -158,15 +160,13 @@ function ConfigurarPermisosPersonales {
     }
 
     try {
-        # Validar que el usuario existe en el sistema
+        # Crear objeto del usuario propietario
         $UserAccount = New-Object System.Security.Principal.NTAccount($Usuario)
-        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
 
         # Obtener la ACL actual del directorio
         $ACL = Get-Acl -Path $CarpetaUsuario
 
         # Bloquear herencia y eliminar permisos heredados
-        Write-Host "Eliminando permisos heredados y configurando nuevos permisos para $Usuario..."
         $ACL.SetAccessRuleProtection($true, $false)
 
         # Limpiar reglas de acceso existentes (excepto las necesarias)
@@ -176,14 +176,20 @@ function ConfigurarPermisosPersonales {
             }
         }
 
-        # Agregar regla de permisos para el usuario con Control Total
-        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        # Agregar permisos para el propietario (Control Total)
+        $AccessRuleUser = New-Object System.Security.AccessControl.FileSystemAccessRule(
             $UserAccount, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow"
         )
-        $ACL.SetAccessRule($AccessRule)
+        $ACL.SetAccessRule($AccessRuleUser)
 
-        # Asignar propiedad al usuario
-        Write-Host "Asignando propiedad de $CarpetaUsuario al usuario $Usuario..."
+        # Agregar permisos para grupo y público (Sin permisos)
+        $ACL.Access | ForEach-Object {
+            if ($_.IdentityReference -like "BUILTIN\Users" -or $_.IdentityReference -like "Everyone") {
+                $ACL.RemoveAccessRule($_)
+            }
+        }
+
+        # Establecer propiedad al usuario
         $ACL.SetOwner($UserAccount)
 
         # Aplicar los cambios a la carpeta
@@ -191,7 +197,7 @@ function ConfigurarPermisosPersonales {
 
         Write-Host "Permisos configurados correctamente para '$Usuario'."
     } catch {
-        Write-Host "Error al configurar permisos para '$Usuario': $_"
+        Write-Host "Error al configurar permisos: $_"
     }
 }
 
