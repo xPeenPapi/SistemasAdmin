@@ -147,9 +147,6 @@ function Crear-UsuarioFTP(){
         # Otorgar permisos completos al usuario
         icacls $UserPersonalDir /grant "$env:COMPUTERNAME\$FTPUserName :(OI)(CI)F"
 
-        # Otorgar permisos completos al administrador
-        icacls $UserPersonalDir /grant "Administradores:(OI)(CI)F"
-
         # Denegar acceso a todos los demás usuarios
         icacls $UserPersonalDir /deny "Todos:(OI)(CI)F"
 
@@ -248,7 +245,22 @@ function Asignar-Grupo {
         Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir : $_"
         return
     }
-        
+
+    try {
+        # Deshabilitar la herencia de permisos y eliminar permisos heredados
+        icacls $GroupDir /inheritance:r
+
+        # Otorgar permisos completos al grupo en la carpeta del grupo
+        icacls $GroupDir /grant "$env:COMPUTERNAME\$nombreGrupo :(OI)(CI)F"
+
+        # Denegar permisos a todos los demás usuarios
+        icacls $GroupDir /deny "Todos:(OI)(CI)F"
+
+        Write-Host "Permisos NTFS configurados correctamente para el grupo $nombreGrupo en $GroupDir."
+    } catch {
+        Write-Host "Error al configurar los permisos NTFS para el grupo $nombreGrupo en $GroupDir : $_"
+    }
+
 }
 
 function Configurar-FTPSite {
@@ -348,14 +360,25 @@ function AislarUsuario(){
     Set-ItemProperty -Path "IIS:\Sites\$FTPSiteName" -Name ftpServer.userisolation.mode -Value 3
     
 }
-
-function Habilitar-AccesoAnonimo(){
+function Habilitar-AccesoAnonimo {
     Param(
         [string]$FTPSiteName
     )
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
-}
 
+    $ParamAnon = @{
+        Filter = "/system.ftpServer/security/authorization"
+        Value = @{
+            accessType = "Allow"
+            users = "?"
+            permissions = 1 
+        }
+        PSPath = 'IIS:\\'
+        Location = $FTPSiteName
+    }
+
+    Add-WebConfiguration @ParamAnon
+}
 function CambiarGrupoFtp {
     Param(
         [String]$Username,
