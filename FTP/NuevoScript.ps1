@@ -127,89 +127,38 @@ function Crear-UsuarioFTP(){
     $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
-
-    # Crear el usuario si no existe
     $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
     $CreateUserFTPUser.SetInfo()
     $CreateUserFTPUser.SetPassword("$FTPPassword")
     $CreateUserFTPUser.SetInfo()
-
-    # Crear directorios para el usuario
-    $userDir = "C:\FTP\LocalUser\$FTPUserName"
-    $userPersonalDir = "$userDir\$FTPUserName"
-
-    mkdir $userDir
-    mkdir $userPersonalDir
-
-    # Crear el directorio público si no existe
+    mkdir C:\FTP\LocalUser\$FTPUserName
+    mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
     if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
         mkdir C:\FTP\LocalUser\Public
     } else {
         Write-Host "La carpeta Public ya existe. No se creará nuevamente."
     }
-
-    # Crear el enlace simbólico
-    cmd /c mklink /D "$userDir\Public" "C:\FTP\LocalUser\Public"
-
-    # Configurar permisos NTFS para el usuario
-    ConfigurarPermisosUsuario -Objeto $FTPUserName -FtpDir $userPersonalDir
-}
-function ConfigurarPermisosUsuario {
-    Param (
-        [String]$Objeto,      
-        [String]$FtpDir      
-    )
-
-    # Validar que el directorio existe
-    if (-not (Test-Path $FtpDir)) {
-        Write-Host "El directorio $FtpDir no existe." 
-        return
-    }
-
-    # Obtener el objeto del usuario
+    
+    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
     try {
-        $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
-        $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+        # Eliminar permisos heredados
+        icacls $UserPersonalDir /inheritance:r
+
+        # Otorgar permisos completos al usuario
+        icacls $UserPersonalDir /grant "$env:COMPUTERNAME\$FTPUserName :(OI)(CI)F"
+
+        # Otorgar permisos completos al administrador
+        icacls $UserPersonalDir /grant "Administradores:(OI)(CI)F"
+
+        # Denegar acceso a todos los demás usuarios
+        icacls $UserPersonalDir /deny "Todos:(OI)(CI)F"
+
+        Write-Host "Permisos NTFS configurados correctamente para la carpeta personal de $FTPUserName."
     } catch {
-        Write-Host "El objeto (usuario) '$Objeto' no fue encontrado." 
-        return
+        Write-Host "Error al configurar los permisos NTFS para la carpeta personal de $FTPUserName : $_"
     }
 
-    # Obtener la ACL actual del directorio
-    $ACL = Get-Acl -Path $FtpDir
-
-    # Crear reglas de acceso
-    $UserAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $UserAccount, 
-        'FullControl', 
-        'ContainerInherit,ObjectInherit', 
-        'None', 
-        'Allow'
-    )
-
-    $AdminAccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "Administrators", 
-        'FullControl', 
-        'ContainerInherit,ObjectInherit', 
-        'None', 
-        'Allow'
-    )
-
-    $DenyRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "Everyone", 
-        'ReadAndExecute', 
-        'ContainerInherit,ObjectInherit', 
-        'None', 
-        'Deny'
-    )
-
-    # Aplicar las reglas de acceso
-    $ACL.SetAccessRule($UserAccessRule)
-    $ACL.SetAccessRule($AdminAccessRule)
-    $ACL.SetAccessRule($DenyRule)
-
-    # Aplicar la ACL actualizada al directorio
-    Set-Acl -Path $FtpDir -AclObject $ACL
+    
 }
 function Asignar-Grupo {
     Param (
