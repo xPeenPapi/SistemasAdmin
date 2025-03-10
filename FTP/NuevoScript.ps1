@@ -273,7 +273,7 @@ function Asignar-Grupo {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
 
-    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\$nombreGrupo C:\FTP\LocalUser\$nombreGrupo
+    cmd /c mklink /D C:\FTP\LocalUser\$Username\$nombreGrupo C:\FTP\LocalUser\$nombreGrupo
 
 
     # Configurar permisos NTFS
