@@ -236,7 +236,6 @@ function Asignar-Grupo {
 
 
 }
-
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
     
@@ -245,21 +244,30 @@ function Configurar-FTPSite {
 
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
 
-    $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            users = "*"
-            permissions = 1
-        }
-        PSPath = 'IIS:\\'
-    Location = "C:\FTP\LocalUser\Public"
-    }
+    # Verificar si la regla de autorización para todos los usuarios ya existe
+    $existingRule = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\\" -Location "C:\FTP\LocalUser\Public" |
+                    Where-Object { $_.users -eq "*" -and $_.permissions -eq 1 }
 
-    Add-WebConfiguration @Param
+    if (-not $existingRule) {
+        $Param = @{
+            Filter = "/system.ftpServer/security/authorization"
+            Value = @{
+                accessType = "Allow"
+                users = "*"
+                permissions = 1  # Solo lectura
+            }
+            PSPath = 'IIS:\\'
+            Location = "C:\FTP\LocalUser\Public"
+        }
+
+        Add-WebConfiguration @Param
+        Write-Host "Regla de autorización para todos los usuarios agregada correctamente."
+    } else {
+        Write-Host "La regla de autorización para todos los usuarios ya existe."
+    }
 
     Configurar-SSLPolicy $FTPSitePath
-    }
+}
 
 function Configurar-FTPReprobados {
     Param ([String]$FTPSiteName)
@@ -269,19 +277,29 @@ function Configurar-FTPReprobados {
     
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
     
-    $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            roles = "reprobados"
-            permissions = 3
+    # Verificar si la regla de autorización para el grupo 'reprobados' ya existe
+    $existingRule = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\\" -Location "C:\FTP\LocalUser\Public" |
+                    Where-Object { $_.roles -eq "reprobados" -and $_.permissions -eq 3 }
+
+    if (-not $existingRule) {
+        $Param = @{
+            Filter = "/system.ftpServer/security/authorization"
+            Value = @{
+                accessType = "Allow"
+                roles = "reprobados"
+                permissions = 3  # Permisos completos
+            }
+            PSPath = 'IIS:\\'
+            Location = "C:\FTP\LocalUser\Public"
         }
-        PSPath = 'IIS:\\'
-        Location = "C:\FTP\LocalUser\Public"
-    }
-    
+
         Add-WebConfiguration @Param
-}  
+        Write-Host "Regla de autorización para el grupo 'reprobados' agregada correctamente."
+    } else {
+        Write-Host "La regla de autorización para el grupo 'reprobados' ya existe."
+    }
+}
+
 function Configurar-FTPRecursadores {
     Param ([String]$FTPSiteName)
         
@@ -290,41 +308,28 @@ function Configurar-FTPRecursadores {
     
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
     
-    $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            roles = "recursadores"
-            permissions = 3
-        }
-        PSPath = 'IIS:\\'
-        Location = "C:\FTP\LocalUser\Public"
-    }
-    
-        Add-WebConfiguration @Param
-}    
+    # Verificar si la regla de autorización para el grupo 'recursadores' ya existe
+    $existingRule = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\\" -Location "C:\FTP\LocalUser\Public" |
+                    Where-Object { $_.roles -eq "recursadores" -and $_.permissions -eq 3 }
 
-function Configurar-FTPRecursadoresFolder {
-    Param ([String]$FTPSiteName)
-        
-    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
-    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
-    
-    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
-    
-    $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            roles = "recursadores"
-            permissions = 3
+    if (-not $existingRule) {
+        $Param = @{
+            Filter = "/system.ftpServer/security/authorization"
+            Value = @{
+                accessType = "Allow"
+                roles = "recursadores"
+                permissions = 3  # Permisos completos
+            }
+            PSPath = 'IIS:\\'
+            Location = "C:\FTP\LocalUser\Public"
         }
-        PSPath = 'IIS:\\'
-        Location = "C:\FTP\recursadores"
-    }
-    
+
         Add-WebConfiguration @Param
-}    
+        Write-Host "Regla de autorización para el grupo 'recursadores' agregada correctamente."
+    } else {
+        Write-Host "La regla de autorización para el grupo 'recursadores' ya existe."
+    }
+}
 
 function Configurar-FTPReprobadosFolder {
     Param ([String]$FTPSiteName)
@@ -334,19 +339,60 @@ function Configurar-FTPReprobadosFolder {
     
     Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
     
-    $Param = @{
-        Filter = "/system.ftpServer/security/authorization"
-        Value = @{
-            accessType = "Allow"
-            roles = "reprobados"
-            permissions = 3
+    # Verificar si la regla de autorización para el grupo 'reprobados' ya existe
+    $existingRule = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\\" -Location "C:\FTP\reprobados" |
+                    Where-Object { $_.roles -eq "reprobados" -and $_.permissions -eq 3 }
+
+    if (-not $existingRule) {
+        $Param = @{
+            Filter = "/system.ftpServer/security/authorization"
+            Value = @{
+                accessType = "Allow"
+                roles = "reprobados"
+                permissions = 3  # Permisos completos
+            }
+            PSPath = 'IIS:\\'
+            Location = "C:\FTP\reprobados"
         }
-        PSPath = 'IIS:\\'
-        Location = "C:\FTP\reprobados"
-    }
-    
+
         Add-WebConfiguration @Param
-}    
+        Write-Host "Regla de autorización para el grupo 'reprobados' en la carpeta 'reprobados' agregada correctamente."
+    } else {
+        Write-Host "La regla de autorización para el grupo 'reprobados' en la carpeta 'reprobados' ya existe."
+    }
+}
+
+function Configurar-FTPRecursadoresFolder {
+    Param ([String]$FTPSiteName)
+        
+    $FTPSitePath = "IIS:\\Sites\\$FTPSiteName"
+    $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+    
+    Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+    
+    # Verificar si la regla de autorización para el grupo 'recursadores' ya existe
+    $existingRule = Get-WebConfiguration -Filter "/system.ftpServer/security/authorization" -PSPath "IIS:\\" -Location "C:\FTP\recursadores" |
+                    Where-Object { $_.roles -eq "recursadores" -and $_.permissions -eq 3 }
+
+    if (-not $existingRule) {
+        $Param = @{
+            Filter = "/system.ftpServer/security/authorization"
+            Value = @{
+                accessType = "Allow"
+                roles = "recursadores"
+                permissions = 3  # Permisos completos
+            }
+            PSPath = 'IIS:\\'
+            Location = "C:\FTP\recursadores"
+        }
+
+        Add-WebConfiguration @Param
+        Write-Host "Regla de autorización para el grupo 'recursadores' en la carpeta 'recursadores' agregada correctamente."
+    } else {
+        Write-Host "La regla de autorización para el grupo 'recursadores' en la carpeta 'recursadores' ya existe."
+    }
+}
+    
 
 function Configurar-SSLPolicy {
     Param ([String]$FTPSitePath)
