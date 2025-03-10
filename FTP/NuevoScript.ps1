@@ -282,10 +282,70 @@ function Asignar-Grupo {
     }
 
     # Configurar permisos NTFS
-    $FtpDir = $GroupDir
-    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
+    $FtpDir = $UserGroupDir
+    ConfigurarPermisosGrupo $nombreGrupo $FtpDir $FTPSiteName
 }
+function ConfigurarPermisosGrupo {
+    Param (
+        [String]$Objeto,      # Nombre del grupo
+        [String]$FtpDir,      # Ruta de la carpeta
+        [String]$FtpSiteName  # Nombre del sitio FTP (opcional)
+    )
 
+    # Validar que el directorio existe
+    if (-not (Test-Path $FtpDir)) {
+        Write-Host "El directorio $FtpDir no existe."
+        return
+    }
+
+    # Validar que el objeto (grupo) existe
+    try {
+        $GroupAccount = New-Object System.Security.Principal.NTAccount($Objeto)
+        $SID = $GroupAccount.Translate([System.Security.Principal.SecurityIdentifier])
+    } catch [System.Security.Principal.IdentityNotMappedException] {
+        Write-Host "El grupo '$Objeto' no fue encontrado."
+        return
+    } catch {
+        Write-Host "Ocurrió un error inesperado al validar el grupo '$Objeto': $_"
+        return
+    }
+
+    # Obtener la ACL actual del directorio
+    $ACL = Get-Acl -Path $FtpDir
+
+    # Bloquear la herencia de permisos y eliminar permisos heredados
+    $ACL.SetAccessRuleProtection($true, $false)
+
+    # Eliminar todos los permisos existentes (excepto los del sistema)
+    $ACL.Access | ForEach-Object {
+        if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
+            $ACL.RemoveAccessRule($_)
+        }
+    }
+
+    # Crear la regla de acceso para el grupo
+    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $GroupAccount,                          # Cuenta del grupo
+        "Modify",                               # Permisos: "Modify" permite leer, escribir, ejecutar y eliminar
+        "ContainerInherit, ObjectInherit",      # Heredar a subcarpetas y archivos
+        "None",                                 # No propagar
+        "Allow"                                 # Tipo de permiso: Permitir
+    )
+
+    # Agregar la regla de acceso a la ACL
+    $ACL.SetAccessRule($AccessRule)
+
+    # Aplicar la ACL modificada al directorio
+    Set-Acl -Path $FtpDir -AclObject $ACL
+
+    Write-Host "Permisos NTFS configurados correctamente para el grupo '$Objeto' en '$FtpDir'."
+
+    # Reiniciar el sitio FTP si es necesario (opcional)
+    if ($FtpSiteName) {
+        Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
+        Write-Host "Sitio FTP '$FtpSiteName' reiniciado."
+    }
+}
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
     
