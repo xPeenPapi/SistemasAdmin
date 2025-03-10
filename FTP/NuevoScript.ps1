@@ -136,71 +136,11 @@ function Crear-UsuarioFTP(){
     if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
         mkdir C:\FTP\LocalUser\Public
     } else {
-        Write-Host "La carpeta Public ya existes"
+        Write-Host "La carpeta Public ya existe. No se creará nuevamente."
     }
-    
-    $SubCarpetaUsuario = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
-    ConfigurarPermisos700 -Usuario $FTPUserName -CarpetaUsuario $SubCarpetaUsuario
 
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
-
 }
-
-
-function ConfigurarPermisos700 {
-    Param (
-        [String]$Usuario,          # Nombre del usuario propietario
-        [String]$CarpetaUsuario    # Ruta de la carpeta personal del usuario
-    )
-
-    # Validar que el directorio existe
-    if (-not (Test-Path $CarpetaUsuario)) {
-        Write-Host "El directorio $CarpetaUsuario no existe."
-        return
-    }
-
-    try {
-        # Crear objeto del usuario propietario
-        $UserAccount = New-Object System.Security.Principal.NTAccount($Usuario)
-
-        # Obtener la ACL actual del directorio
-        $ACL = Get-Acl -Path $CarpetaUsuario
-
-        # Bloquear herencia y eliminar permisos heredados
-        $ACL.SetAccessRuleProtection($true, $false)
-
-        # Limpiar reglas de acceso existentes (excepto las necesarias)
-        $ACL.Access | ForEach-Object {
-            if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
-                $ACL.RemoveAccessRule($_)
-            }
-        }
-
-        # Agregar permisos para el propietario (Control Total)
-        $AccessRuleUser = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            $UserAccount, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow"
-        )
-        $ACL.SetAccessRule($AccessRuleUser)
-
-        # Agregar permisos para grupo y público (Sin permisos)
-        $ACL.Access | ForEach-Object {
-            if ($_.IdentityReference -like "BUILTIN\Users" -or $_.IdentityReference -like "Everyone") {
-                $ACL.RemoveAccessRule($_)
-            }
-        }
-
-        # Establecer propiedad al usuario
-        $ACL.SetOwner($UserAccount)
-
-        # Aplicar los cambios a la carpeta
-        Set-Acl -Path $CarpetaUsuario -AclObject $ACL
-
-        Write-Host "Permisos configurados correctamente para '$Usuario'."
-    } catch {
-        Write-Host "Error al configurar permisos: $_"
-    }
-}
-
 function Asignar-Grupo {
     Param (
         [String]$Username,
@@ -273,74 +213,23 @@ function Asignar-Grupo {
         New-Item -ItemType Directory -Path $UserGroupDir
     }
 
+    try {
+        if (Test-Path $UserGroupDir) {
+            Remove-Item -Path $UserGroupDir -Force -Recurse
+        }
+        New-Item -ItemType SymbolicLink -Path $UserGroupDir -Target $GroupDir
+        Write-Host "Enlace simbólico creado correctamente en $UserGroupDir."
+    } catch {
+        Write-Host "No se pudo crear el enlace simbólico en $UserGroupDir : $_"
+        return
+    }
+
 
     # Configurar permisos NTFS
     $FtpDir = $UserGroupDir
-    ConfigurarPermisosGrupo $nombreGrupo $FtpDir $FTPSiteName
-
-    cmd /c mklink /D "C:\FTP\LocalUser\$Username\$nombreGrupo" "C:\FTP\$nombreGrupo"
+    ConfigurarPermisosNTFS $nombreGrupo $FtpDir $FTPSiteName
 }
-function ConfigurarPermisosGrupo {
-    Param (
-        [String]$Objeto,      # Nombre del grupo
-        [String]$FtpDir,      # Ruta de la carpeta
-        [String]$FtpSiteName  # Nombre del sitio FTP (opcional)
-    )
 
-    # Validar que el directorio existe
-    if (-not (Test-Path $FtpDir)) {
-        Write-Host "El directorio $FtpDir no existe."
-        return
-    }
-
-    # Validar que el objeto (grupo) existe
-    try {
-        $GroupAccount = New-Object System.Security.Principal.NTAccount($Objeto)
-        $SID = $GroupAccount.Translate([System.Security.Principal.SecurityIdentifier])
-    } catch [System.Security.Principal.IdentityNotMappedException] {
-        Write-Host "El grupo '$Objeto' no fue encontrado."
-        return
-    } catch {
-        Write-Host "Ocurrió un error inesperado al validar el grupo '$Objeto': $_"
-        return
-    }
-
-    # Obtener la ACL actual del directorio
-    $ACL = Get-Acl -Path $FtpDir
-
-    # Bloquear la herencia de permisos y eliminar permisos heredados
-    $ACL.SetAccessRuleProtection($true, $false)
-
-    # Eliminar todos los permisos existentes (excepto los del sistema)
-    $ACL.Access | ForEach-Object {
-        if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
-            $ACL.RemoveAccessRule($_)
-        }
-    }
-
-    # Crear la regla de acceso para el grupo
-    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $GroupAccount,                          # Cuenta del grupo
-        "Modify",                               # Permisos: "Modify" permite leer, escribir, ejecutar y eliminar
-        "ContainerInherit, ObjectInherit",      # Heredar a subcarpetas y archivos
-        "None",                                 # No propagar
-        "Allow"                                 # Tipo de permiso: Permitir
-    )
-
-    # Agregar la regla de acceso a la ACL
-    $ACL.SetAccessRule($AccessRule)
-
-    # Aplicar la ACL modificada al directorio
-    Set-Acl -Path $FtpDir -AclObject $ACL
-
-    Write-Host "Permisos NTFS configurados correctamente para el grupo '$Objeto' en '$FtpDir'."
-
-    # Reiniciar el sitio FTP si es necesario (opcional)
-    if ($FtpSiteName) {
-        Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
-        Write-Host "Sitio FTP '$FtpSiteName' reiniciado."
-    }
-}
 function Configurar-FTPSite {
     Param ([String]$FTPSiteName)
     
@@ -562,7 +451,6 @@ while($true){
                 } else {
                     Write-Host "El nombre de usuario no es valido. No se creara el usuario."
                 }
-
             }
             2 {
                 $Username= Read-Host "Ingrese el nombre del Usuario asignar"
