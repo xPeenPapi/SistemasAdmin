@@ -138,24 +138,22 @@ function Crear-UsuarioFTP(){
     } else {
         Write-Host "La carpeta Public ya existe. No se creará nuevamente."
     }
+    $PublicDir = "C:\FTP\LocalUser\Public"
+    $UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
+
+    icacls $PublicDir /inheritance:r
+
+    icacls $PublicDir /grant "Todos:(OI)(CI)R"
+
+    icacls $PublicDir /deny "Todos:(OI)(CI)W"
     
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
-    try {
-        # Eliminar permisos heredados
-        icacls $UserPersonalDir /inheritance:r
+   
+    icacls $UserPersonalDir /inheritance:r
 
-        # Otorgar permisos completos al usuario
-        icacls $UserPersonalDir /grant "$env:COMPUTERNAME\$FTPUserName :(OI)(CI)F"
+    icacls $UserPersonalDir /grant "$env:COMPUTERNAME\$FTPUserName :(OI)(CI)F"
 
-        # Denegar acceso a todos los demás usuarios
-        icacls $UserPersonalDir /deny "Todos:(OI)(CI)F"
-
-        Write-Host "Permisos NTFS configurados correctamente para la carpeta personal de $FTPUserName."
-    } catch {
-        Write-Host "Error al configurar los permisos NTFS para la carpeta personal de $FTPUserName : $_"
-    }
-
-    
+    icacls $UserPersonalDir /deny "Todos:(OI)(CI)F"
 }
 function Asignar-Grupo {
     Param (
@@ -364,14 +362,16 @@ function Habilitar-AccesoAnonimo {
     Param(
         [string]$FTPSiteName
     )
+    # Habilitar autenticación anónima
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
 
+    # Configurar reglas de autorización para usuarios anónimos (solo lectura)
     $ParamAnon = @{
         Filter = "/system.ftpServer/security/authorization"
         Value = @{
             accessType = "Allow"
             users = "?"
-            permissions = 1 
+            permissions = 1  # Solo lectura (1 = Read, 2 = Write, 3 = Read/Write)
         }
         PSPath = 'IIS:\\'
         Location = $FTPSiteName
@@ -457,6 +457,8 @@ ConfigurarPermisosNTFS -Objeto "Public" -FtpDir $FTPRootDir -FTPSiteName $FTPSit
 
 AislarUsuario $FTPSiteName
 Habilitar-AccesoAnonimo $FTPSiteName
+Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
+
 while($true){
     echo "===================================="
     echo "          Mene Principal           "
