@@ -157,49 +157,44 @@ function ConfigurarPermisosPersonales {
         return
     }
 
-    # Validar que el usuario existe
     try {
+        # Validar que el usuario existe en el sistema
         $UserAccount = New-Object System.Security.Principal.NTAccount($Usuario)
         $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
-    } catch [System.Security.Principal.IdentityNotMappedException] {
-        Write-Host "El usuario '$Usuario' no fue encontrado."
-        return
-    } catch {
-        Write-Host "Ocurrió un error inesperado al validar el usuario '$Usuario': $_"
-        return
-    }
 
-    # Obtener la ACL actual del directorio
-    $ACL = Get-Acl -Path $CarpetaUsuario
+        # Obtener la ACL actual del directorio
+        $ACL = Get-Acl -Path $CarpetaUsuario
 
-    # Bloquear la herencia de permisos y eliminar permisos heredados
-    $ACL.SetAccessRuleProtection($true, $false)
+        # Bloquear herencia y eliminar permisos heredados
+        Write-Host "Eliminando permisos heredados y configurando nuevos permisos para $Usuario..."
+        $ACL.SetAccessRuleProtection($true, $false)
 
-    # Eliminar todos los permisos existentes (excepto los del sistema y administradores)
-    $ACL.Access | ForEach-Object {
-        if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
-            $ACL.RemoveAccessRule($_)
+        # Limpiar reglas de acceso existentes (excepto las necesarias)
+        $ACL.Access | ForEach-Object {
+            if (-not ($_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -or $_.IdentityReference -eq "BUILTIN\Administrators")) {
+                $ACL.RemoveAccessRule($_)
+            }
         }
+
+        # Agregar regla de permisos para el usuario con Control Total
+        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            $UserAccount, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow"
+        )
+        $ACL.SetAccessRule($AccessRule)
+
+        # Asignar propiedad al usuario
+        Write-Host "Asignando propiedad de $CarpetaUsuario al usuario $Usuario..."
+        $ACL.SetOwner($UserAccount)
+
+        # Aplicar los cambios a la carpeta
+        Set-Acl -Path $CarpetaUsuario -AclObject $ACL
+
+        Write-Host "Permisos configurados correctamente para '$Usuario'."
+    } catch {
+        Write-Host "Error al configurar permisos para '$Usuario': $_"
     }
-
-    # Crear la regla de acceso para el usuario
-    $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        $UserAccount,                              # Cuenta del usuario
-        "FullControl",                             # Permisos: "FullControl" permite control total
-        "ContainerInherit, ObjectInherit",         # Heredar a subcarpetas y archivos
-        "None",                                    # No propagar
-        "Allow"                                    # Tipo de permiso: Permitir
-    )
-
-    # Agregar la regla de acceso a la ACL
-    $ACL.SetAccessRule($AccessRule)
-
-    # Establecer al usuario como propietario de la carpeta
-    $ACL.SetOwner($UserAccount)
-    Set-Acl -Path $CarpetaUsuario -AclObject $ACL
-
-    Write-Host "Permisos personales configurados correctamente para el usuario '$Usuario' en '$CarpetaUsuario'."
 }
+
 function Asignar-Grupo {
     Param (
         [String]$Username,
