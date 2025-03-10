@@ -138,17 +138,12 @@ function Crear-UsuarioFTP(){
     } else {
         Write-Host "La carpeta Public ya existe. No se creará nuevamente."
     }
-    $PublicDir = "C:\FTP\LocalUser\Public"
-    $UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
+    #$PublicDir = "C:\FTP\LocalUser\Public"
+    #$UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
 
-    
     cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
    
-    icacls $UserPersonalDir /inheritance:r
 
-    icacls $UserPersonalDir /grant "$env:COMPUTERNAME\$FTPUserName :(OI)(CI)F"
-
-    icacls $UserPersonalDir /deny "Todos:(OI)(CI)F"
 }
 function Asignar-Grupo {
     Param (
