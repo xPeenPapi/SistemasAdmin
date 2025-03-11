@@ -66,12 +66,13 @@ function Crear-GrupoFTP {
             Write-Host "Error: $_"  
         }
 }
-function Verifica-Password() {
+function Verifica-Password {
     Param (
-        [String]$Password
+        [String]$Password,
+        [String]$Username
     )
 
-    $longitudMinima = 8
+    $longitudMinima = 8 
     $regexMayuscula = "[A-Z]"
     $regexMinuscula = "[a-z]"
     $regexNumero = "[0-9]"
@@ -83,17 +84,17 @@ function Verifica-Password() {
     }
 
     if (-not ($Password -match $regexMayuscula)) {
-        Write-Host "La contraseña debe contener al menos una letra mayuscula."
+        Write-Host "La contraseña debe contener al menos una letra mayúscula."
         return $false
     }
 
     if (-not ($Password -match $regexMinuscula)) {
-        Write-Host "La contraseña debe contener al menos una letra minuscula."
+        Write-Host "La contraseña debe contener al menos una letra minúscula."
         return $false
     }
 
     if (-not ($Password -match $regexNumero)) {
-        Write-Host "La contraseña debe contener al menos un numero."
+        Write-Host "La contraseña debe contener al menos un número."
         return $false
     }
 
@@ -102,7 +103,12 @@ function Verifica-Password() {
         return $false
     }
 
-    Write-Host "La contraseña es valida."
+    if ($Password -match $Username) {
+        Write-Host "La contraseña no puede contener el nombre de usuario."
+        return $false
+    }
+
+    Write-Host "La contraseña es válida."
     return $true
 }
 function Validar-Usuario {
@@ -128,7 +134,7 @@ function Validar-Usuario {
         return $false
     }
 
-    Write-Host "El nombre de usuario es válido."
+    Write-Host "El nombre de usuario es valido."
     return $true
 }
 function Crear-UsuarioFTP {
@@ -144,7 +150,7 @@ function Crear-UsuarioFTP {
     }
 
     # Validar la contraseña
-    if (-not (Verifica-Password -Password $Password)) {
+    if (-not (Verifica-Password -Password $Password -Username $Username)) {
         Write-Host "La contraseña no cumple con los requisitos. No se creará el usuario."
         return
     }
