@@ -84,22 +84,22 @@ function Verifica-Password {
     }
 
     if (-not ($Password -match $regexMayuscula)) {
-        Write-Host "La contraseña debe contener al menos una letra mayúscula."
+        Write-Host "La contraseña debe contener al menos una letra mayuscula."
         return $false
     }
 
     if (-not ($Password -match $regexMinuscula)) {
-        Write-Host "La contraseña debe contener al menos una letra minúscula."
+        Write-Host "La contraseña debe contener al menos una letra minuscula."
         return $false
     }
 
     if (-not ($Password -match $regexNumero)) {
-        Write-Host "La contraseña debe contener al menos un número."
+        Write-Host "La contraseña debe contener al menos un numero."
         return $false
     }
 
     if (-not ($Password -match $regexEspecial)) {
-        Write-Host "La contraseña debe contener al menos un carácter especial (!@#$%^&*()\-+=)."
+        Write-Host "La contraseña debe contener al menos un caracter especial (!@#$%^&*()\-+=)."
         return $false
     }
 
@@ -108,7 +108,7 @@ function Verifica-Password {
         return $false
     }
 
-    Write-Host "La contraseña es válida."
+    Write-Host "La contraseña es valida."
     return $true
 }
 function Validar-Usuario {
@@ -120,7 +120,7 @@ function Validar-Usuario {
     $longitudMaxima = 20
 
     if ([string]::IsNullOrEmpty($Username)) {
-        Write-Host "El nombre de usuario no puede estar vacío."
+        Write-Host "El nombre de usuario no puede estar vacio."
         return $false
     }
 
@@ -130,7 +130,7 @@ function Validar-Usuario {
     }
 
     if (-not ($Username -match '^[a-zA-Z0-9]+$')) {
-        Write-Host "El nombre de usuario solo puede contener caracteres alfanuméricos."
+        Write-Host "El nombre de usuario solo puede contener caracteres alfanumericos."
         return $false
     }
 
@@ -143,25 +143,21 @@ function Crear-UsuarioFTP {
         [String]$Password
     )
 
-    # Validar el nombre de usuario
     if (-not (Validar-Usuario -Username $Username)) {
-        Write-Host "El nombre de usuario no es válido. No se creará el usuario."
+        Write-Host "El nombre de usuario no es valido. No se creara el usuario."
         return
     }
 
-    # Validar la contraseña
     if (-not (Verifica-Password -Password $Password -Username $Username)) {
-        Write-Host "La contraseña no cumple con los requisitos. No se creará el usuario."
+        Write-Host "La contraseña no cumple con los requisitos. No se creara el usuario."
         return
     }
 
-    # Si el nombre de usuario y la contraseña son válidos, proceder a crear el usuario
     $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
 
     try {
-        # Crear el usuario
         $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
         $CreateUserFTPUser.SetInfo()
 
@@ -203,7 +199,7 @@ function Asignar-Grupo {
     $gruposPermitidos = @("reprobados", "recursadores")
 
     if ($gruposPermitidos -notcontains $nombreGrupo) {
-        Write-Host "El grupo '$nombreGrupo' no está permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
+        Write-Host "El grupo '$nombreGrupo' no esta permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
         return
     }
 
@@ -214,7 +210,7 @@ function Asignar-Grupo {
         Write-Host "El usuario $Username no fue encontrado."
         return
     } catch {
-        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_"
+        Write-Host "Ocurrio un error inesperado al buscar el usuario $Username : $_"
         return
     }
 
@@ -222,7 +218,7 @@ function Asignar-Grupo {
     try {
         $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
         if (-not $Group.Path) {
-            throw "El grupo no es válido."
+            throw "El grupo no es valido."
         }
     } catch {
         Write-Host "El grupo $nombreGrupo no fue encontrado."
@@ -487,7 +483,7 @@ function CambiarGrupoFtp {
         }
         # Verificar si el grupo existe
         if (-not (Get-LocalGroup -Name $nombreGrupo -ErrorAction SilentlyContinue)) {
-            Write-Host "El grupo '$nombreGrupo' no existe. Inténtelo de nuevo."
+            Write-Host "El grupo '$nombreGrupo' no existe. Intentelo de nuevo."
             return
         }
         # Obtener los grupos a los que pertenece el usuario
@@ -497,7 +493,7 @@ function CambiarGrupoFtp {
 
         # Verificar si el usuario pertenece a algún grupo
         if ($grupos.Count -eq 0) {
-            Write-Host "El usuario $Username no pertenece a ningún grupo."
+            Write-Host "El usuario $Username no pertenece a ningun grupo."
         } else {
             # Eliminar al usuario de los grupos actuales
             foreach ($grupo in $grupos) {
