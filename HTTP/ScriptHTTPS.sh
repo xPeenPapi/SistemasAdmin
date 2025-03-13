@@ -79,7 +79,7 @@ function instalar_servicio() {
         exit 1
     fi
 
-    local carpeta="${archivo%.tar.gz}"
+    local carpeta="$archivo"
     cd "$carpeta" || exit 1
 
     echo "Compilando $nombre..."

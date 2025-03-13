@@ -1,49 +1,99 @@
 #!/bin/bash
 
-function entero(){
+function entero() {
     local valor=$1
-    if[["$valor" =~ ^[0-9]+$]]; then
+    if [[ "$valor" =~ ^[0-9]+$ ]]; then
         return 0
     else    
         return 1
     fi
 }
-function puerto(){
+
+function puerto() {
     local puerto=$1
-    if[["$puerto" -ge 1024 && "$puerto" -le 65535]]; then
+    if [[ "$puerto" -ge 1024 && "$puerto" -le 65535 ]]; then
         return 0
     else
         return 1
     fi
 }
-function hacerPeticion(){
-    local =$url
-    local html=$(curl -s "$curl")
+
+function bloquear_puertos_comunes() {
+    local puerto=$1
+    case $puerto in
+        21|22|23|25|53|80|110|143|443|3306|3389)
+            echo "El puerto $puerto está reservado para servicios comunes (FTP, SSH, HTTP, etc.)."
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+function hacerPeticion() {
+    local url=$1
+    local html=$(curl -s "$url")
     echo "${html}"
 }
 
-function descargarLighttpd(){
-    echo "Ingresa el puerto en el que se instalara Lighttpd: "
-    read puerto
+function descargarLighttpd() {
+    local nombreArchivo="lighttpd.tar.gz"
+    local Link="https://www.lighttpd.net/download/"
+    local Pagina=$(hacerPeticion "$Link")
+    local versionRegex='lighttpd-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz'
+    local descarga=$(echo "$Pagina" | grep -oE "$versionRegex" | head -n 1)
     
-    local Link = "https://www.lighttpd.net/releases/"
-    local Pagina=${$hacerPeticion "$Link"}
-    local regex = 'lighttpd-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz'
-    local descarga=$(echo "$Pagina" | grep -oE "$regex" | head  -n 1)
-    if[[ -n "$descarga"]]: then
+    if [[ -n "$descarga" ]]; then
         echo "Descargando Lighttpd: $descarga...."
         curl -s -O "https://www.lighttpd.net/download/$descarga"
-        if[[ $? -eq 0]]; then
+        if [[ $? -eq 0 ]]; then
             echo "Lighttpd descargado correctamente"
         else
             echo "Error: Lighttpd no se pudo descargar"
             exit 1
         fi
     else
-        echo "Error no se pudo encontrar la version de Lighttpd"
+        echo "Error: No se pudo encontrar la versión de Lighttpd"
         exit 1
     fi
+
+    sudo tar -xvzf "$descarga" > /dev/null 2>&1
+    local carpeta="${descarga%.tar.gz}"
+    cd "$carpeta" || exit 1
+    ./configure --prefix=/usr/local/lighttpd > /dev/null 2>&1
+    make > /dev/null 2>&1
+    sudo make install > /dev/null 2>&1
 }
+
+function instalarLighttpd() {
+    echo "Ingrese el puerto"
+    read puerto
+
+    while true; do          
+        if entero "$puerto" && puerto "$puerto" && bloquear_puertos_comunes "$puerto"; then
+            break
+        else
+            echo "Puerto no válido o en uso. Intente de nuevo."
+        fi
+    done
+
+    descargarLighttpd
+
+    # Verificar la instalación
+    /usr/local/lighttpd/sbin/lighttpd -v
+    rutaArchivoConfiguracion="/usr/local/lighttpd/etc/lighttpd.conf"
+    # Remuevo el puerto en uso
+    sudo sed -i '/^server.port/d' "$rutaArchivoConfiguracion"
+    # Añado el puerto proporcionado por el usuario
+    sudo printf "server.port = $puerto\n" >> "$rutaArchivoConfiguracion"
+    echo "Escuchando en el puerto $puerto"
+    # Compruebo que realmente esté escuchando en ese puerto
+    sudo grep -i "server.port = $puerto" "$rutaArchivoConfiguracion"
+    sudo /usr/local/lighttpd/sbin/lighttpd restart
+    ps aux | grep lighttpd
+}
+
 while true; do
     echo "Servicio a instalar"
     echo "1. Descargar Lighttpd"
@@ -60,21 +110,20 @@ while true; do
             echo "Selecciona una opcion: "
             read opcLighttpd
             
-            case "opcLighttpd" in
+            case "$opcLighttpd" in
                 "1")
-                    $descargarLighttpd
-                ;;
+                    instalarLighttpd
+                    ;;
                 "2")
                     echo "Saliendo al menu principal"
-                ;;
+                    ;;
                 *)
                     echo "Opcion no valida. Intente de nuevo."
-                ;;
+                    ;;
             esac
-        done
-            
-
-
-
-
-    
+            ;;
+        *)
+            echo "Opcion no valida. Intente de nuevo."
+            ;;
+    esac
+done
