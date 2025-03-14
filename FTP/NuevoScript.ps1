@@ -66,12 +66,13 @@ function Crear-GrupoFTP {
             Write-Host "Error: $_"  
         }
 }
-function Verifica-Password() {
+function Verifica-Password {
     Param (
-        [String]$Password
+        [String]$Password,
+        [String]$Username
     )
 
-    $longitudMinima = 8
+    $longitudMinima = 8 
     $regexMayuscula = "[A-Z]"
     $regexMinuscula = "[a-z]"
     $regexNumero = "[0-9]"
@@ -98,7 +99,12 @@ function Verifica-Password() {
     }
 
     if (-not ($Password -match $regexEspecial)) {
-        Write-Host "La contraseña debe contener al menos un carácter especial (!@#$%^&*()\-+=)."
+        Write-Host "La contraseña debe contener al menos un caracter especial (!@#$%^&*()\-+=)."
+        return $false
+    }
+
+    if ($Password -match $Username) {
+        Write-Host "La contraseña no puede contener el nombre de usuario."
         return $false
     }
 
@@ -109,41 +115,79 @@ function Validar-Usuario {
     Param (
         [String]$Username
     )
+    
+    $longitudMinima = 4
     $longitudMaxima = 20
 
-    if ($Username.Length -gt $longitudMaxima) {
-        Write-Host "El nombre de usuario no puede superar los $longitudMaxima caracteres."
+    if ([string]::IsNullOrEmpty($Username)) {
+        Write-Host "El nombre de usuario no puede estar vacio."
         return $false
     }
+
+    if ($Username.Length -lt $longitudMinima -or $Username.Length -gt $longitudMaxima) {
+        Write-Host "El nombre de usuario debe tener entre $longitudMinima y $longitudMaxima caracteres."
+        return $false
+    }
+
+    if (-not ($Username -match '^[a-zA-Z0-9]+$')) {
+        Write-Host "El nombre de usuario solo puede contener caracteres alfanumericos."
+        return $false
+    }
+
     Write-Host "El nombre de usuario es valido."
     return $true
 }
-function Crear-UsuarioFTP(){
+function Crear-UsuarioFTP {
     Param(
         [String]$Username,
         [String]$Password
     )
 
+    if (-not (Validar-Usuario -Username $Username)) {
+        Write-Host "El nombre de usuario no es valido. No se creara el usuario."
+        return
+    }
+
+    if (-not (Verifica-Password -Password $Password -Username $Username)) {
+        Write-Host "La contraseña no cumple con los requisitos. No se creara el usuario."
+        return
+    }
+
     $FTPUserName = $Username
     $FTPPassword = $Password
     $ADSI = Get-ADSI
-    $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
-    $CreateUserFTPUser.SetInfo()
-    $CreateUserFTPUser.SetPassword("$FTPPassword")
-    $CreateUserFTPUser.SetInfo()
-    mkdir C:\FTP\LocalUser\$FTPUserName
-    mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName
-    if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
-        mkdir C:\FTP\LocalUser\Public
-    } else {
-        Write-Host "La carpeta Public ya existe. No se creará nuevamente."
+
+    try {
+        $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
+        $CreateUserFTPUser.SetInfo()
+
+        # Establecer la contraseña
+        $CreateUserFTPUser.SetPassword("$FTPPassword")
+        $CreateUserFTPUser.SetInfo()
+
+        # Crear directorios para el usuario
+        mkdir C:\FTP\LocalUser\$FTPUserName -ErrorAction Stop
+        mkdir C:\FTP\LocalUser\$FTPUserName\$FTPUserName -ErrorAction Stop
+
+        # Crear la carpeta Public si no existe
+        if (-not (Test-Path "C:\FTP\LocalUser\Public")) {
+            mkdir C:\FTP\LocalUser\Public -ErrorAction Stop
+        } else {
+            Write-Host "La carpeta Public ya existe. No se creará nuevamente."
+        }
+
+        cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
+
+        Write-Host "Usuario $FTPUserName creado correctamente."
+    } catch {
+        Write-Host "Error al crear el usuario o directorios: $_"
+        try {
+            $ADSI.Delete("User", "$FTPUserName")
+            Write-Host "El usuario $FTPUserName fue eliminado debido a un error."
+        } catch {
+            Write-Host "No se pudo eliminar el usuario $FTPUserName."
+        }
     }
-    #$PublicDir = "C:\FTP\LocalUser\Public"
-    #$UserPersonalDir = "C:\FTP\LocalUser\$FTPUserName\$FTPUserName"
-
-    cmd /c mklink /D C:\FTP\LocalUser\$FTPUserName\Public C:\FTP\LocalUser\Public
-   
-
 }
 function Asignar-Grupo {
     Param (
@@ -155,7 +199,7 @@ function Asignar-Grupo {
     $gruposPermitidos = @("reprobados", "recursadores")
 
     if ($gruposPermitidos -notcontains $nombreGrupo) {
-        Write-Host "El grupo '$nombreGrupo' no está permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
+        Write-Host "El grupo '$nombreGrupo' no esta permitido. Solo se puede asignar a 'reprobados' o 'recursadores'."
         return
     }
 
@@ -166,7 +210,7 @@ function Asignar-Grupo {
         Write-Host "El usuario $Username no fue encontrado."
         return
     } catch {
-        Write-Host "Ocurrió un error inesperado al buscar el usuario $Username : $_"
+        Write-Host "Ocurrio un error inesperado al buscar el usuario $Username : $_"
         return
     }
 
@@ -174,7 +218,7 @@ function Asignar-Grupo {
     try {
         $Group = [ADSI]"WinNT://$env:ComputerName/$nombreGrupo,Group"
         if (-not $Group.Path) {
-            throw "El grupo no es válido."
+            throw "El grupo no es valido."
         }
     } catch {
         Write-Host "El grupo $nombreGrupo no fue encontrado."
@@ -367,13 +411,11 @@ function ConfigurarPermisosNTFS {
         [String]$FtpDir,      
         [String]$FtpSiteName  
     )
-
     # Validar que el directorio existe
     if (-not (Test-Path $FtpDir)) {
         Write-Host "El directorio $FtpDir no existe." 
         return
     }
-
     # Validar que el objeto (usuario/grupo) existe
     try {
         $UserAccount = New-Object System.Security.Principal.NTAccount($Objeto)
@@ -399,7 +441,6 @@ function ConfigurarPermisosNTFS {
         $ACL | Set-Acl -Path $FtpDir
    
 
-    Restart-WebItem "IIS:\Sites\$FtpSiteName" -Verbose
 }
     
 function Crear_RutaFTP(){
@@ -415,7 +456,6 @@ function AislarUsuario(){
     Param (
         [String]$FTPSiteName
     )
-    
     Set-ItemProperty -Path "IIS:\Sites\$FTPSiteName" -Name ftpServer.userisolation.mode -Value 3
     
 }
@@ -423,9 +463,7 @@ function Habilitar-AccesoAnonimo {
     Param(
         [string]$FTPSiteName
     )
-    # Habilitar autenticación anónima
     Set-ItemProperty "IIS:\Sites\$FTPSiteName" -Name ftpServer.security.authentication.anonymousAuthentication.enabled -Value $true
-
 }
 function CambiarGrupoFtp {
     Param(
@@ -440,13 +478,11 @@ function CambiarGrupoFtp {
             Write-Host "El usuario '$Username' no existe. Intentelo de nuevo."
             return
         }
-
         # Verificar si el grupo existe
         if (-not (Get-LocalGroup -Name $nombreGrupo -ErrorAction SilentlyContinue)) {
-            Write-Host "El grupo '$nombreGrupo' no existe. Inténtelo de nuevo."
+            Write-Host "El grupo '$nombreGrupo' no existe. Intentelo de nuevo."
             return
         }
-
         # Obtener los grupos a los que pertenece el usuario
         $grupos = Get-LocalGroup | Where-Object { 
             $_ | Get-LocalGroupMember | Where-Object { $_.Name -eq "$env:COMPUTERNAME\$Username" }
@@ -454,28 +490,24 @@ function CambiarGrupoFtp {
 
         # Verificar si el usuario pertenece a algún grupo
         if ($grupos.Count -eq 0) {
-            Write-Host "El usuario $Username no pertenece a ningún grupo."
+            Write-Host "El usuario $Username no pertenece a ningun grupo."
         } else {
             # Eliminar al usuario de los grupos actuales
             foreach ($grupo in $grupos) {
                 Remove-LocalGroupMember -Group $grupo.Name -Member $Username -ErrorAction Stop
             }
 
-            # Eliminar el enlace simbólico y la carpeta del grupo anterior
             $rutaGrupoAnterior = "C:\FTP\LocalUser\$Username\$($grupos[0].Name)"
             if (Test-Path $rutaGrupoAnterior) {
                 Remove-Item -Path $rutaGrupoAnterior -Recurse -Force -ErrorAction Stop
             }
         }
-
         Asignar-Grupo -User $Username -nombreGrupo $nombreGrupo -FTPSiteName $FTPSiteName
-
-        # Crear el enlace simbólico para el nuevo grupo
         $rutaNuevoGrupo = "C:\FTP\LocalUser\$Username\$nombreGrupo"
         if (!(Test-Path $rutaNuevoGrupo)) {
             cmd /c mklink /D $rutaNuevoGrupo "C:\FTP\$nombreGrupo"
         } else {
-            Write-Host "El enlace simbólico para el nuevo grupo ya existe."
+            Write-Host "El enlace simbolico para el nuevo grupo ya existe."
         }
 
         Write-Host "El usuario $Username ha sido asignado al grupo $nombreGrupo correctamente."
@@ -539,17 +571,9 @@ while($true){
             1 {
                 $Username = Read-Host "Ingresa el Usuario"
     
-                if (Validar-Usuario -Username $Username) {
-                    $Password = Read-Host "Ingresa la contraseña del usuario"
+                $Password = Read-Host "Ingresa la contraseña del usuario"
                     
-                    if (Verifica-Password -Password $Password) {
-                        Crear-UsuarioFTP -Username $Username -Password $Password
-                    } else {
-                        Write-Host "La contraseña no cumple con los requisitos. No se creara el usuario."
-                    }
-                } else {
-                    Write-Host "El nombre de usuario no es valido. No se creara el usuario."
-                }
+                Crear-UsuarioFTP -Username $Username -Password $Password
             }
             2 {
                 $Username= Read-Host "Ingrese el nombre del Usuario asignar"

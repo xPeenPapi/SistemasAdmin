@@ -1,17 +1,14 @@
 #!/bin/bash
-
-# Función para validar si un valor es un número entero
-function es_entero() {
+function entero() {
     local valor=$1
     if [[ "$valor" =~ ^[0-9]+$ ]]; then
         return 0
-    else
+    else    
         return 1
     fi
 }
 
-# Función para validar si un puerto está en el rango válido
-function es_puerto_valido() {
+function puerto() {
     local puerto=$1
     if [[ "$puerto" -ge 1024 && "$puerto" -le 65535 ]]; then
         return 0
@@ -20,17 +17,6 @@ function es_puerto_valido() {
     fi
 }
 
-# Función para verificar si un puerto está en uso
-function puerto_en_uso() {
-    local puerto=$1
-    if netstat -tuln | grep ":$puerto " > /dev/null; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Función para bloquear puertos comunes
 function bloquear_puertos_comunes() {
     local puerto=$1
     case $puerto in
@@ -44,167 +30,191 @@ function bloquear_puertos_comunes() {
     esac
 }
 
-# Función para obtener el HTML de una URL
-function hacer_peticion() {
+function hacerPeticion() {
     local url=$1
-    curl -s "$url"
+    local html=$(curl -s "$url")
+    echo "${html}"
 }
 
-# Función para extraer la versión LTS o de desarrollo usando una expresión regular
-function encontrar_version() {
-    local html=$1
-    local regex=$2
-    echo "$html" | grep -oE "$regex" | head -n 1
+function obtenerVersionLTS(){
+    local url=$1
+    local index=${2:-0}
+    readarray -t versions < <(curl -s "$url" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | sort -V -r | uniq)
+    echo "${versions[$index]}"
 }
 
-# Función para descargar, compilar e instalar un servicio desde su código fuente
-function instalar_servicio() {
-    local nombre=$1
-    local version=$2
-    local url_descarga=$3
-    local puerto=$4
+function instalarServer(){
+    local url=$1
+    local versionInstall=$2
+    local archivoDescomprimido=$3
+    local servicio=$4
 
-    echo "Descargando $nombre versión $version..."
-    curl -s -O "$url_descarga"
-    if [[ $? -ne 0 ]]; then
-        echo "Error: No se pudo descargar $nombre."
-        exit 1
+    # Instalar la version
+    if ! curl -s -O "$url$versionInstall"; then
+        echo "Error al descargar el archivo $versionInstall"
+        return 1
     fi
-
-    local archivo=$(basename "$url_descarga")
-    echo "Descomprimiendo $archivo..."
-    tar -xvzf "$archivo"
-    if [[ $? -ne 0 ]]; then
-        echo "Error: No se pudo descomprimir $archivo."
-        exit 1
-    fi
-
-    local carpeta="$archivo"
-    cd "$carpeta" || exit 1
-
-    echo "Compilando $nombre..."
-    ./configure --prefix=/usr/local/"$nombre" > /dev/null 2>&1
-    make > /dev/null 2>&1
+    # Descomprimir el archivo descargado
+    sudo tar -xzf $versionInstall > /dev/null 2>&1
+    # Entrar a la carpeta
+    cd "$archivoDescomprimido"
+    # Compilar el archivo
+    ./configure --prefix=/usr/local/"$servicio" > /dev/null 2>&1
+    # Instalar servicio
+    make -s > /dev/null 2>&1
     sudo make install > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        echo "Error: No se pudo instalar $nombre."
-        exit 1
-    fi
-
-    echo "Configurando $nombre en el puerto $puerto..."
-    case $nombre in
-        apache)
-            sudo sed -i "s/Listen 80/Listen $puerto/" /usr/local/apache/conf/httpd.conf
-            sudo /usr/local/apache/bin/apachectl start
-            ;;
-        nginx)
-            sudo sed -i "s/listen 80/listen $puerto/" /usr/local/nginx/conf/nginx.conf
-            sudo /usr/local/nginx/sbin/nginx
-            ;;
-        lighttpd)
-            sudo sed -i "s/server.port = 80/server.port = $puerto/" /usr/local/lighttpd/etc/lighttpd.conf
-            sudo /usr/local/lighttpd/sbin/lighttpd start
-            ;;
-    esac
-
-    echo "$nombre instalado y configurado en el puerto $puerto."
 }
 
-# Función para obtener la última versión LTS y de desarrollo
-function obtener_versiones() {
-    local url_descargas=$1
-    local regex_lts=$2
-    local regex_dev=$3
-
-    html=$(hacer_peticion "$url_descargas")
-    version_lts=$(encontrar_version "$html" "$regex_lts")
-    version_dev=$(encontrar_version "$html" "$regex_dev")
-
-    echo "$version_lts $version_dev"
+function remove_tar_gz_suffix() {
+    local filename=$1
+    echo "${filename%.tar.gz}"
 }
 
-# Menú principal
+function primerDigito(){
+    local index=$1
+    local cadena=$2
+
+    IFS='.' read -ra version <<< "$cadena"
+    echo "${version[$index]}"
+}
+
 while true; do
-    echo "¿Qué servicio desea instalar?"
-    echo "1. Apache"
-    echo "2. Nginx"
-    echo "3. Lighttpd"
+    echo "=============================================="
+    echo "==================== MENU ===================="
+    echo "=============================================="
+    echo "Servicios"
+    echo "1. Descargar Tomcat"
+    echo "2. Descargar Apache"
+    echo "3. Descargar Nginx"
     echo "4. Salir"
-    read -p "Seleccione una opción: " opcion
+    echo "Selecciona una opcion:"
+    read opcion
 
-    case $opcion in
-        1|2|3)
-            # Obtener las versiones disponibles dinámicamente
-            case $opcion in
-                1)
-                    nombre="apache"
-                    url_descargas="https://httpd.apache.org/download.cgi"
-                    regex_lts='httpd-([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz'
-                    regex_dev='httpd-([0-9]+\.[0-9]+\.[0-9]+)-dev\.tar\.gz'
+    case "$opcion" in
+        "1")
+            descargarTomcat="https://tomcat.apache.org/index.html"
+            versionDesarrollador=$(obtenerVersionLTS "$descargarTomcat" 0)
+            ultimaVersionLTS=$(obtenerVersionLTS "$descargarTomcat" 1)
+
+            echo "1. Instalar ultima version LTS: $ultimaVersionLTS"
+            echo "2. Instalar version de desarrollo: $versionDesarrollador"
+            echo "3. Salir"
+            echo "Selecciona una opcion: "
+            read -p "> " opcTomcat
+
+            case "$opcTomcat" in
+                "1")
+                    firstDigit=$(primerDigito 0 "$ultimaVersionLTS")
+                    read -p "Ingresa el puerto que se le asignara a Tomcat: " puerto
+                    bloquear_puertos_comunes "$puerto"
+
+                    if ss -tuln | grep -q ":$puerto"; then
+                        echo "El puerto $puerto esta en uso por otro servicio. Intentelo de nuevo"
+                    elif [[ $? -eq 0 ]]; then
+                        echo "El puerto $puerto esta en uso por otro servicio. Intentelo de nuevo"
+                    else
+                        sudo apt update
+                        sudo apt install default-jdk -y
+                        java -version
+                        curl -s -O "https://dlcdn.apache.org/tomcat/tomcat-$firstDigit/v$ultimaVersionLTS/bin/apache-tomcat-$ultimaVersionLTS.tar.gz"
+                        tar -xzvf apache-tomcat-$ultimaVersionLTS.tar.gz
+                        sudo mv apache-tomcat-$ultimaVersionLTS /opt/tomcat
+                        # Modificar el puerto en server.xml
+                        server_xml="/opt/tomcat/conf/server.xml"
+                        sudo sed -i "s/port=\"8080\"/port=\"$puerto\"/g" "$server_xml"
+                        # Otorgar permisos de ejecución
+                        sudo chmod +x /opt/tomcat/bin/*.sh
+                        # Iniciar Tomcat
+                        /opt/tomcat/bin/startup.sh
+                    fi
                     ;;
-                2)
-                    nombre="nginx"
-                    url_descargas="https://nginx.org/en/download.html"
-                    regex_lts='nginx-([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz'
-                    regex_dev='nginx-([0-9]+\.[0-9]+\.[0-9]+)-dev\.tar\.gz'
+                "2")
+                    firstDigit=$(primerDigito 0 "$versionDesarrollador")
+                    read -p "Ingrese el puerto en el que se instalará Tomcat: " puerto
+                    bloquear_puertos_comunes "$puerto"
+
+                    if ss -tuln | grep -q ":$puerto"; then
+                        echo "El puerto $puerto esta en uso. Eliga otro."
+                    elif [[ $? -eq 0 ]]; then
+                        echo "El puerto $puerto esta ocupado en otro servicio."
+                    else
+                        # Instalar Java ya que Tomcat lo requiere
+                        sudo apt update
+                        sudo apt install default-jdk -y
+                        java -version
+                        curl -s -O "https://dlcdn.apache.org/tomcat/tomcat-$firstDigit/v$versionDesarrollador/bin/apache-tomcat-$versionDesarrollador.tar.gz"
+                        tar -xzvf apache-tomcat-$versionDesarrollador.tar.gz
+                        sudo mv apache-tomcat-$versionDesarrollador /opt/tomcat
+                        # Modificar el puerto en server.xml
+                        server_xml="/opt/tomcat/conf/server.xml"
+                        sudo sed -i "s/port=\"8080\"/port=\"$puerto\"/g" "$server_xml"
+                        # Otorgar permisos de ejecución
+                        sudo chmod +x /opt/tomcat/bin/*.sh
+                        # Iniciar Tomcat
+                        /opt/tomcat/bin/startup.sh
+                    fi
                     ;;
-                3)
-                    nombre="lighttpd"
-                    url_descargas="https://www.lighttpd.net/download/"
-                    regex_lts='lighttpd-([0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz'
-                    regex_dev='lighttpd-([0-9]+\.[0-9]+\.[0-9]+)-dev\.tar\.gz'
+                "3")
+                    echo "Saliendo al menu principal"
                     ;;
-            esac
-
-            # Obtener versiones LTS y de desarrollo
-            read version_lts version_dev <<< $(obtener_versiones "$url_descargas" "$regex_lts" "$regex_dev")
-
-            echo "Versiones disponibles para $nombre:"
-            echo "1. Ultima versión LTS: $version_lts"
-            if [[ -n "$version_dev" ]]; then
-                echo "2. Ultima versión de desarrollo: $version_dev"
-            else
-                echo "2. No hay versión de desarrollo disponible."
-            fi
-            read -p "Seleccione la versión: " version_opcion
-
-            if [[ $version_opcion -eq 1 ]]; then
-                version="$version_lts"
-            elif [[ $version_opcion -eq 2 && -n "$version_dev" ]]; then
-                version="$version_dev"
-            else
-                echo "Opción no válida."
-                continue
-            fi
-
-            while true; do
-                read -p "Ingrese el puerto para la configuración: " puerto
-                if es_entero "$puerto" && es_puerto_valido "$puerto" && ! puerto_en_uso "$puerto" && bloquear_puertos_comunes "$puerto"; then
-                    break
-                else
-                    echo "Puerto no válido o en uso. Intente de nuevo."
-                fi
-            done
-
-            # Descargar, compilar e instalar el servicio
-            case $opcion in
-                1)
-                    instalar_servicio "apache" "$version" "https://downloads.apache.org/httpd/httpd-$version.tar.gz" "$puerto"
-                    ;;
-                2)
-                    instalar_servicio "nginx" "$version" "https://nginx.org/download/nginx-$version.tar.gz" "$puerto"
-                    ;;
-                3)
-                    instalar_servicio "lighttpd" "$version" "https://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-$version.tar.gz" "$puerto"
+                *)
+                    echo "Opcion invalida"
                     ;;
             esac
             ;;
-        4)
-            echo "Saliendo..."
-            break
+        "2")
+            descargarApache="https://httpd.apache.org/download.cgi"
+            paginaApache=$(hacerPeticion "$descargarApache")
+            mapfile -t versions < <(obtenerVersionLTS "$descargarApache" 0)
+            ultimaVersionLTS=$(versions[0])
+
+            echo "1. Instalar ultima version LTS: $ultimaVersionLTS"
+            echo "2. Apache no cuenta con version de desarrollo: "
+            echo "3. Salir"
+            echo "Selecciona una opcion: "
+            read -p $opcApache
+
+            case "$opcApache" in
+                "1")
+                    read -p "Ingrese el puerto en el que se instalará Apache: " puerto
+                    bloquear_puertos_comunes -puerto $puerto
+
+                    # Verificar si el puerto esta disponible
+                    if ss -tuln | grep -q ":$puerto "; then
+                        echo "El puerto $puerto esta en uso. Eliga otro."
+                    elif [[ $? -eq 0 ]]; then
+                        echo "El puerto $puerto esta ocupado en otro servicio."
+                    else
+                        install_server_http "$descargarApache" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
+                        # Verificar la instalacón
+                        /usr/local/apache2/bin/httpd -v
+                        # Ruta de la configuración del archivo
+                        rutaArchivoConfiguracion="/usr/local/apache2/conf/httpd.conf"
+                        # Remover el puerto en uso actual
+                        sudo sed -i '/^Listen/d' $rutaArchivoConfiguracion
+                        # Añadir puerto que eligio el usuario
+                        sudo printf "Listen $puerto" >> $rutaArchivoConfiguracion
+                        # Comprobar si el puerto esta escuchando
+                        sudo grep -i "Listen $puerto" $rutaArchivoConfiguracion
+
+                    fi
+                    ;;
+                "2")
+                    echo "Saliendo al menu principal"
+                    ;;
+                *)
+                    echo "Opcion invalida"
+                    ;;
+        "3")
+            echo "Función para descargar Nginx - Por implementar"
+            # Aquí implementarías la lógica para instalar Nginx
+            ;;
+        "4")
+            echo "Saliendo del programa"
+            exit 0
             ;;
         *)
-            echo "Opción no válida. Intente de nuevo."
+            echo "Opción inválida, por favor seleccione una opción correcta"
             ;;
     esac
 done

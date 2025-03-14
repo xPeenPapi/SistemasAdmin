@@ -53,6 +53,39 @@ crear_grupos() {
         exit 1
     fi
 }
+anonimo(){
+    cat <<EOF | sudo tee /etc/vsftpd.conf
+listen=YES
+listen_ipv6=NO
+
+anonymous_enable=YES
+
+local_enable=YES
+write_enable=YES
+
+dirmessage_enable=YES
+use_localtime=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+pasv_enable=YES
+pasv_min_port=40000
+pasv_max_port=50000
+anon_root=/srv/FTP/LocalUser/anon-public
+
+
+chroot_local_user=YES
+allow_writeable_chroot=YES
+EOF
+
+    sudo mkdir -p /home/FTP/anon-public
+    sudo mkdir -p /srv/FTP/LocalUser/anon-public/Public
+
+    sudo chmod 0555 /srv/FTP//LocalUser/anon-public 
+    sudo chown root: /srv/FTP//LocalUser/anon-public
+
+    sudo mount --bind /srv/FTP/LocalUser/Public /srv/FTP/LocalUser/anon-public/Public
+    sudo chmod 0555 /srv/FTP/LocalUser/anon-public/Public
+}
 
 crear_usuario() {
     while true; do
@@ -65,8 +98,11 @@ crear_usuario() {
     sudo chmod 777 /home/$username
     sudo chown $username:$username /home/$username
 
+    sudo mkdir /home/FTP/publica
+    sudo chmod 775 /home/FTP/publica
+
+
     sudo mkdir /home/$username/publica
-    sudo chmod 775 /home/$username/publica
     sudo mount --bind /home/FTP/publica /home/$username/publica
 
     sudo mkdir /home/$username/$username
