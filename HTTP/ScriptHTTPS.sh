@@ -110,8 +110,6 @@ while true; do
 
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso por otro servicio. Intentelo de nuevo"
-                    elif [[ $? -eq 0 ]]; then
-                        echo "El puerto $puerto esta en uso por otro servicio. Intentelo de nuevo"
                     else
                         sudo apt update
                         sudo apt install default-jdk -y
@@ -135,8 +133,6 @@ while true; do
 
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
-                    elif [[ $? -eq 0 ]]; then
-                        echo "El puerto $puerto esta ocupado en otro servicio."
                     else
                         # Instalar Java ya que Tomcat lo requiere
                         sudo apt update
@@ -165,27 +161,25 @@ while true; do
         "2")
             descargarApache="https://httpd.apache.org/download.cgi"
             paginaApache=$(hacerPeticion "$descargarApache")
-            mapfile -t versions < <(obtenerVersionLTS "$descargarApache" 0)
-            ultimaVersionLTS=$(versions[0])
+            readarray -t versions < <(curl -s "$descargarApache" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | sort -V -r | uniq)
+            ultimaVersionLTS="${versions[0]}"
 
             echo "1. Instalar ultima version LTS: $ultimaVersionLTS"
-            echo "2. Apache no cuenta con version de desarrollo: "
+            echo "2. Apache no cuenta con version de desarrollo"
             echo "3. Salir"
             echo "Selecciona una opcion: "
-            read -p $opcApache
+            read -p "> " opcApache
 
             case "$opcApache" in
                 "1")
                     read -p "Ingrese el puerto en el que se instalará Apache: " puerto
-                    bloquear_puertos_comunes -puerto $puerto
+                    bloquear_puertos_comunes "$puerto"
 
                     # Verificar si el puerto esta disponible
-                    if ss -tuln | grep -q ":$puerto "; then
+                    if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
-                    elif [[ $? -eq 0 ]]; then
-                        echo "El puerto $puerto esta ocupado en otro servicio."
                     else
-                        install_server_http "$descargarApache" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
+                        instalarServer "https://downloads.apache.org/httpd/" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
                         # Verificar la instalacón
                         /usr/local/apache2/bin/httpd -v
                         # Ruta de la configuración del archivo
@@ -196,18 +190,80 @@ while true; do
                         sudo printf "Listen $puerto" >> $rutaArchivoConfiguracion
                         # Comprobar si el puerto esta escuchando
                         sudo grep -i "Listen $puerto" $rutaArchivoConfiguracion
-
                     fi
                     ;;
                 "2")
                     echo "Saliendo al menu principal"
                     ;;
+                "3")
+                    echo "saliendo al menu principal"
+                    ;;
                 *)
                     echo "Opcion invalida"
                     ;;
+            esac
+            ;;
         "3")
-            echo "Función para descargar Nginx - Por implementar"
-            # Aquí implementarías la lógica para instalar Nginx
+            descargarNginx="https://nginx.org/en/download.html"
+            versionDesarrollador=$(obtenerVersionLTS "$descargarNginx" 0)
+            ultimaVersionLTS=$(obtenerVersionLTS "$descargarNginx" 1)     
+            
+            echo "1. Instalar ultima version LTS: $ultimaVersionLTS"
+            echo "2. Instalar version de desarrollador: $versionDesarrollador"
+            echo "3. Salir"
+            echo "Selecciona una opcion: "
+            read -p "> " opcNginx
+
+            case "$opcNginx" in     
+                "1")
+                    read -p "Ingrese el puerto en el que se instalará Nginx: " puerto
+                    bloquear_puertos_comunes "$puerto"
+
+                    if ss -tuln | grep -q ":$puerto"; then
+                        echo "El puerto $puerto esta en uso. Eliga otro."
+                    else
+                        instalarServer "https://nginx.org/download/" "nginx-$ultimaVersionLTS.tar.gz" "nginx-$ultimaVersionLTS" "nginx"
+                        # Verificar la instalación de Nginx
+                        /usr/local/nginx/sbin/nginx -v
+                        # Ruta de la configuración del archivo
+                        rutaArchivoConfiguracion="/usr/local/nginx/conf/nginx.conf"
+                        # Modificar el puerto
+                        sudo sed -i -E "s/listen[[:space:]]{7}[0-9]{1,5}/listen      $puerto/" "$rutaArchivoConfiguracion"
+                        # Verificar si esta escuchando en el puerto
+                        sudo grep -i "listen[[:space:]]{7}" "$rutaArchivoConfiguracion"
+                        sudo /usr/local/nginx/sbin/nginx
+                        sudo /usr/local/nginx/sbin/nginx -s reload
+                        ps aux | grep nginx
+                    fi 
+                    ;;
+                "2")
+                    read -p "Ingrese el puerto en el que se instalará Nginx: " puerto
+                    bloquear_puertos_comunes "$puerto"
+
+                    if ss -tuln | grep -q ":$puerto"; then
+                        echo "El puerto $puerto esta en uso. Eliga otro."
+                    else
+                        instalarServer "https://nginx.org/download/" "nginx-$versionDesarrollador.tar.gz" "nginx-$versionDesarrollador" "nginx"
+                        # Verificar la instalación de Nginx
+                        /usr/local/nginx/sbin/nginx -v
+                        # Ruta de la configuración del archivo
+                        rutaArchivoConfiguracion="/usr/local/nginx/conf/nginx.conf"
+                        # Modificar el puerto
+                        sudo sed -i -E "s/listen[[:space:]]{7}[0-9]{1,5}/listen      $puerto/" "$rutaArchivoConfiguracion"
+                        # Verificar si esta escuchando en el puerto
+                        sudo grep -i "listen[[:space:]]{7}" "$rutaArchivoConfiguracion"
+                        sudo /usr/local/nginx/sbin/nginx
+                        sudo /usr/local/nginx/sbin/nginx -s reload
+                        ps aux | grep nginx
+                    fi
+                    ;;
+                "3")
+                    echo "Saliendo al menú principal..."
+                    ;;
+                *)
+                    echo "Opción no válida"
+                    ;;
+            esac
             ;;
         "4")
             echo "Saliendo del programa"
