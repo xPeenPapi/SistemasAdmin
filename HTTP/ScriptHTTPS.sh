@@ -117,6 +117,8 @@ while true; do
                         curl -s -O "https://dlcdn.apache.org/tomcat/tomcat-$firstDigit/v$ultimaVersionLTS/bin/apache-tomcat-$ultimaVersionLTS.tar.gz"
                         tar -xzvf apache-tomcat-$ultimaVersionLTS.tar.gz
                         sudo mv apache-tomcat-$ultimaVersionLTS /opt/tomcat
+                        sudo chown -R $USER:$USER /opt/tomcat
+                        sudo chmod -R 755 /opt/tomcat
                         # Modificar el puerto en server.xml
                         server_xml="/opt/tomcat/conf/server.xml"
                         sudo sed -i "s/port=\"8080\"/port=\"$puerto\"/g" "$server_xml"
@@ -159,9 +161,9 @@ while true; do
             esac
             ;;
         "2")
-            descargarApache="https://httpd.apache.org/download.cgi"
+            descargarApache="https://downloads.apache.org/httpd/"
             paginaApache=$(hacerPeticion "$descargarApache")
-            readarray -t versions < <(curl -s "$descargarApache" | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | sort -V -r | uniq)
+            mapfile -t versions < <(obtenerVersionLTS "$descargarApache" 0)
             ultimaVersionLTS="${versions[0]}"
 
             echo "1. Instalar ultima version LTS: $ultimaVersionLTS"
@@ -179,7 +181,7 @@ while true; do
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
                     else
-                        instalarServer "https://downloads.apache.org/httpd/" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
+                        instalarServer "descargarApache" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
                         # Verificar la instalacón
                         /usr/local/apache2/bin/httpd -v
                         # Ruta de la configuración del archivo
