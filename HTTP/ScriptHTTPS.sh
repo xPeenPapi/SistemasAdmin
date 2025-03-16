@@ -111,6 +111,7 @@ while true; do
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso por otro servicio. Intentelo de nuevo"
                     else
+                        sudo rm -rf /opt/tomcat
                         sudo apt update
                         sudo apt install default-jdk -y
                         java -version
@@ -125,7 +126,8 @@ while true; do
                         # Otorgar permisos de ejecución
                         sudo chmod +x /opt/tomcat/bin/*.sh
                         # Iniciar Tomcat
-                        /opt/tomcat/bin/startup.sh
+                        sudo /opt/tomcat/bin/shutdown.sh
+                        sudo /opt/tomcat/bin/startup.sh
                     fi
                     ;;
                 "2")
@@ -136,6 +138,7 @@ while true; do
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
                     else
+                        sudo rm -rf /opt/tomcat
                         # Instalar Java ya que Tomcat lo requiere
                         sudo apt update
                         sudo apt install default-jdk -y
@@ -149,7 +152,8 @@ while true; do
                         # Otorgar permisos de ejecución
                         sudo chmod +x /opt/tomcat/bin/*.sh
                         # Iniciar Tomcat
-                        /opt/tomcat/bin/startup.sh
+                        sudo /opt/tomcat/bin/shutdown.sh
+                        sudo /opt/tomcat/bin/startup.sh
                     fi
                     ;;
                 "3")
@@ -181,7 +185,7 @@ while true; do
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
                     else
-                        instalarServer "descargarApache" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
+                        instalarServer "$descargarApache" "httpd-$ultimaVersionLTS.tar.gz" "httpd-$ultimaVersionLTS" "apache2"
                         # Verificar la instalacón
                         /usr/local/apache2/bin/httpd -v
                         # Ruta de la configuración del archivo
@@ -192,6 +196,7 @@ while true; do
                         sudo printf "Listen $puerto" >> $rutaArchivoConfiguracion
                         # Comprobar si el puerto esta escuchando
                         sudo grep -i "Listen $puerto" $rutaArchivoConfiguracion
+                        sudo /usr/local/apache2/bin/httpd -k start
                     fi
                     ;;
                 "2")
@@ -221,23 +226,38 @@ while true; do
                     read -p "Ingrese el puerto en el que se instalará Nginx: " puerto
                     bloquear_puertos_comunes "$puerto"
 
+                    # Limpiar instalaciones previas
+                    sudo systemctl stop nginx 2>/dev/null
+                    sudo pkill nginx 2>/dev/null
+                    sudo rm -rf /usr/local/nginx
+
                     if ss -tuln | grep -q ":$puerto"; then
-                        echo "El puerto $puerto esta en uso. Eliga otro."
+                        echo "El puerto $puerto está en uso. Elija otro."
                     else
-                        instalarServer "https://nginx.org/download/" "nginx-$ultimaVersionLTS.tar.gz" "nginx-$ultimaVersionLTS" "nginx"
-                        # Verificar la instalación de Nginx
-                        /usr/local/nginx/sbin/nginx -v
-                        # Ruta de la configuración del archivo
-                        rutaArchivoConfiguracion="/usr/local/nginx/conf/nginx.conf"
-                        # Modificar el puerto
-                        sudo sed -i -E "s/listen[[:space:]]{7}[0-9]{1,5}/listen      $puerto/" "$rutaArchivoConfiguracion"
-                        # Verificar si esta escuchando en el puerto
-                        sudo grep -i "listen[[:space:]]{7}" "$rutaArchivoConfiguracion"
-                        sudo /usr/local/nginx/sbin/nginx
-                        sudo /usr/local/nginx/sbin/nginx -s reload
-                        ps aux | grep nginx
-                    fi 
-                    ;;
+                    # Instalar dependencias
+                    sudo apt update && sudo apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev
+
+                    # Instalar Nginx
+                    instalarServer "$descargarNginx" "nginx-$ultimaVersionLTS.tar.gz" "nginx-$ultimaVersionLTS" "nginx"
+
+                    if [ $? -ne 0 ]; then
+                        echo "Error: La instalación falló."
+                        exit 1
+                    fi
+
+                    # Modificar puerto en nginx.conf
+                    rutaArchivoConfiguracion="/usr/local/nginx/conf/nginx.conf"
+                    sudo sed -i -E "s/listen[[:space:]]+[0-9]{1,5}([^0-9]|$)/listen $puerto;/g" "$rutaArchivoConfiguracion"
+
+                    # Iniciar Nginx
+                    sudo /usr/local/nginx/sbin/nginx
+                    if [ $? -eq 0 ]; then
+                        echo "¡Nginx reinstalado correctamente en el puerto $puerto!"
+                    else
+                        echo "Error: No se pudo iniciar Nginx. Verifica los logs."
+                    fi
+                fi                  
+                ;;
                 "2")
                     read -p "Ingrese el puerto en el que se instalará Nginx: " puerto
                     bloquear_puertos_comunes "$puerto"
