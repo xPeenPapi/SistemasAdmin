@@ -211,7 +211,7 @@ while true; do
             esac
             ;;
         "3")
-            descargarNginx="https://nginx.org/en/download.html"
+            descargarNginx="https://nginx.org/en/download.html/"
             versionDesarrollador=$(obtenerVersionLTS "$descargarNginx" 0)
             ultimaVersionLTS=$(obtenerVersionLTS "$descargarNginx" 1)     
             
@@ -238,7 +238,7 @@ while true; do
                     sudo apt update && sudo apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev
 
                     # Instalar Nginx
-                    instalarServer "$descargarNginx" "nginx-$ultimaVersionLTS.tar.gz" "nginx-$ultimaVersionLTS" "nginx"
+                    instalarServer "https://nginx.org/download/" "nginx-$ultimaVersionLTS.tar.gz" "nginx-$ultimaVersionLTS" "nginx"
 
                     if [ $? -ne 0 ]; then
                         echo "Error: La instalación falló."
