@@ -93,7 +93,10 @@ while($true){
                     Write-Output "Puerto no valido, debe estar entre 1 y 65535."
                 } elseif (Es-PuertoValido -port $PORT) {
                     Write-Host "El puerto $PORT está reservado para un servicio."
-                } else {
+                } elseif (VerifyPortsReserved -port $PORT) {
+                    Write-Host "El puerto $PORT está reservado para un servicio."
+                } 
+                   else{
                     # Configurar el puerto en IIS
                     $configPath = "$env:SystemRoot\System32\inetsrv\config\applicationHost.config"
                     
