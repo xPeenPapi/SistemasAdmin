@@ -120,7 +120,7 @@ while($true){
                     Stop-Service -Name W3SVC -Force
             
                     # Modificar el archivo de configuración para cambiar el puerto
-                    (Get-Content $configPath) -replace 'bindingInformation="\*:80:"', "bindingInformation=`"*:$PORT :`"" | Set-Content $configPath
+                    (Get-Content $configPath) -replace 'bindingInformation="\*:\d+:"', "bindingInformation=`"*:${PORT}:`"" | Set-Content $configPath
             
                     # Reiniciar IIS
                     Start-Service -Name W3SVC
