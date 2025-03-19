@@ -106,7 +106,7 @@ while($true){
                 # Validar el puerto
                 if ($PORT -notmatch "^\d+$") {
                     Write-Output "Debes ingresar un número."
-                } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
+                } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
                     Write-Output "Puerto no válido, debe estar entre 1 y 65535."
                 } elseif (-not (Es-PuertoValido -puerto $PORT)) {
                     Write-Host "El puerto $PORT está reservado para otro servicio."
@@ -152,10 +152,10 @@ while($true){
 
                             if ($PORT -notmatch "^\d+$") {
                                 Write-Output "Debes ingresar un número."
-                            } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
-                                Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (Es-PuertoValido -port $PORT) {
-                                Write-Host "El puerto $PORT esta reservado para un servicio ."
+                            } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
+                                Write-Output "Puerto inválido."
+                            } elseif (-not (Es-PuertoValido -port $PORT)) {
+                                Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
                                 # Obtiene la versión limpia de Caddy (parece que "quit-V" es una función personalizada, debería verificarse).
@@ -175,11 +175,11 @@ while($true){
                             $PORT = Read-Host "Ingresa el puerto donde se realizara la instalacion"
 
                             if ($PORT -notmatch "^\d+$") {
-                                Write-Output "Debes ingresar un número."
-                            } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
-                                Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            }  elseif (Es-PuertoValido -port $PORT) {
-                                Write-Host "El puerto $PORT esta reservado para un servicio ."
+                                Write-Output "Debes ingresar un numero."
+                            } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
+                                Write-Output "Puerto invalido."
+                            } elseif (-not (Es-PuertoValido -port $PORT)) {
+                                Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
                                 $devVersionClean = (quit-V -version "$devVersion")
@@ -219,11 +219,11 @@ while($true){
                         "1"{
                             $PORT = Read-Host "Ingresa el puerto donde se realizara la instalacion"
                             if ($PORT -notmatch "^\d+$") {
-                                Write-Output "Debes ingresar un numero."
-                            } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
-                                Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (Es-PuertoValido -port $PORT) {
-                                Write-Host "El puerto $PORT está reservado para un servicio ."
+                                Write-Output "Debes ingresar un número."
+                            } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
+                                Write-Output "Puerto inválido."
+                            } elseif (-not (Es-PuertoValido -port $PORT)) {
+                                Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name nginx -ErrorAction SilentlyContinue
                                 Invoke-WebRequest -UseBasicParsing "https://nginx.org/download/nginx-$ltsVersion.zip" -Outfile "C:\Descargas\nginx-$ltsVersion.zip"
@@ -239,11 +239,11 @@ while($true){
                         "2"{
                             $PORT = Read-Host "Ingresa el puerto donde se realizara la instalacion"
                             if ($PORT -notmatch "^\d+$") {
-                                Write-Output "Debes ingresar un numero."
-                            } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
-                                Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (Es-PuertoValido -port $PORT) {
-                                Write-Host "El puerto $PORT está reservado para un servicio ."
+                                Write-Output "Debes ingresar un número."
+                            } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
+                                Write-Output "Puerto inválido."
+                            } elseif (-not (Es-PuertoValido -port $PORT)) {
+                                Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name nginx -ErrorAction SilentlyContinue
                                 Invoke-WebRequest -UseBasicParsing "https://nginx.org/download/nginx-$devVersion.zip" -Outfile "C:\Descargas\nginx-$devVersion.zip"
