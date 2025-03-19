@@ -113,14 +113,11 @@ while($true){
                 } elseif (Test-PortInUse -port $PORT) {
                     Write-Host "El puerto $PORT ya está en uso."
                 } else {
-                    # Configurar el puerto en IIS
-                    $configPath = "$env:SystemRoot\System32\inetsrv\config\applicationHost.config"
-                    
                     # Detener IIS para realizar cambios
                     Stop-Service -Name W3SVC -Force
             
                     # Modificar el archivo de configuración para cambiar el puerto
-                    (Get-Content $configPath) -replace 'bindingInformation="\*:\d+:"', "bindingInformation=`"*:${PORT}:`"" | Set-Content $configPath
+                    New-WebBinding -Name "Default Web Site" -Protocol http -IPAddress "*" -Port $PORT
             
                     # Reiniciar IIS
                     Start-Service -Name W3SVC
