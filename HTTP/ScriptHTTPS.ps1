@@ -20,7 +20,18 @@ function quit-V([string]$version) {
     return $version -replace "^v", ""
 }
 
-function Es-PuertoValido([int]$puerto) {
+function Test-PortInUse {
+    param (
+        [int]$port
+    )
+    $connection = Test-NetConnection -ComputerName localhost -Port $port -InformationLevel Quiet
+    return $connection
+}
+
+function Es-PuertoValido {
+    param (
+        [int]$puerto
+    )
     $puertosReservados = @{
         20 = "FTP"
         21 = "FTP"
@@ -40,6 +51,12 @@ function Es-PuertoValido([int]$puerto) {
         389 = "LDAP"
         443 = "HTTPS"
     }
+
+    if ($puertosReservados.ContainsKey($puerto)) {
+        Write-Host "El puerto $puerto está reservado para: $($puertosReservados[$puerto])"
+        return $false
+    }
+    return $true
 }
 
 
@@ -88,15 +105,14 @@ while($true){
             
                 # Validar el puerto
                 if ($PORT -notmatch "^\d+$") {
-                    Write-Output "Debes ingresar un numero."
+                    Write-Output "Debes ingresar un número."
                 } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
-                    Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                } elseif (Es-PuertoValido -port $PORT) {
-                    Write-Host "El puerto $PORT está reservado para un servicio."
-                } elseif (VerifyPortsReserved -port $PORT) {
-                    Write-Host "El puerto $PORT está reservado para un servicio."
-                } 
-                   else{
+                    Write-Output "Puerto no válido, debe estar entre 1 y 65535."
+                } elseif (-not (Es-PuertoValido -puerto $PORT)) {
+                    Write-Host "El puerto $PORT está reservado para otro servicio."
+                } elseif (Test-PortInUse -port $PORT) {
+                    Write-Host "El puerto $PORT ya está en uso."
+                } else {
                     # Configurar el puerto en IIS
                     $configPath = "$env:SystemRoot\System32\inetsrv\config\applicationHost.config"
                     
@@ -113,7 +129,6 @@ while($true){
             
                     # Agregar regla de firewall para el puerto
                     netsh advfirewall firewall add rule name="IIS" dir=in action=allow protocol=TCP localport=$PORT
-
                 }
             }
         
