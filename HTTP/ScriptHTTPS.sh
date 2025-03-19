@@ -10,17 +10,18 @@ function entero() {
 
 function puerto() {
     local puerto=$1
-    if [[ "$puerto" -ge 1024 && "$puerto" -le 65535 ]]; then
+    if [[ "$puerto" -ge 1 && "$puerto" -le 65535 ]]; then
         return 0
     else
         return 1
     fi
 }
 
+
 function bloquear_puertos_comunes() {
     local puerto=$1
     case $puerto in
-        21|22|23|25|53|80|110|143|443|3306|3389)
+        20|21|22|23|25|53|67|68|80|110|119|123|143|161|162|339|443|3306|3389)
             echo "El puerto $puerto está reservado para servicios comunes (FTP, SSH, HTTP, etc.)."
             return 1
             ;;
@@ -261,24 +262,32 @@ while true; do
                 "2")
                     read -p "Ingrese el puerto en el que se instalará Nginx: " puerto
                     bloquear_puertos_comunes "$puerto"
+                    
+                    sudo systemctl stop nginx 2>/dev/null
+                    sudo pkill nginx 2>/dev/null
+                    sudo rm -rf /usr/local/nginx
 
                     if ss -tuln | grep -q ":$puerto"; then
                         echo "El puerto $puerto esta en uso. Eliga otro."
                     else
+                        sudo apt update && sudo apt install -y build-essential libpcre3 libpcre3-dev zlib1g zlib1g-dev libssl-dev
+
                         instalarServer "https://nginx.org/download/" "nginx-$versionDesarrollador.tar.gz" "nginx-$versionDesarrollador" "nginx"
-                        # Verificar la instalación de Nginx
-                        /usr/local/nginx/sbin/nginx -v
+                        if [ $? -ne 0 ]; then
+                        echo "Error: La instalación falló."
+                        exit 1
+                        fi
                         # Ruta de la configuración del archivo
                         rutaArchivoConfiguracion="/usr/local/nginx/conf/nginx.conf"
-                        # Modificar el puerto
-                        sudo sed -i -E "s/listen[[:space:]]{7}[0-9]{1,5}/listen      $puerto/" "$rutaArchivoConfiguracion"
-                        # Verificar si esta escuchando en el puerto
-                        sudo grep -i "listen[[:space:]]{7}" "$rutaArchivoConfiguracion"
-                        sudo /usr/local/nginx/sbin/nginx
-                        sudo /usr/local/nginx/sbin/nginx -s reload
-                        ps aux | grep nginx
+                        sudo sed -i -E "s/listen[[:space:]]+[0-9]{1,5}([^0-9]|$)/listen $puerto;/g" "$rutaArchivoConfiguracion"
+                          sudo /usr/local/nginx/sbin/nginx
+                    if [ $? -eq 0 ]; then
+                        echo "¡Nginx reinstalado correctamente en el puerto $puerto!"
+                    else
+                        echo "Error: No se pudo iniciar Nginx. Verifica los logs."
                     fi
-                    ;;
+                fi              
+                ;;
                 "3")
                     echo "Saliendo al menú principal..."
                     ;;
