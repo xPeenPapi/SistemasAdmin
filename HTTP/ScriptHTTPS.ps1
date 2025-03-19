@@ -127,21 +127,21 @@ while($true){
                 Write-Output "2. Versión de desarrollo $devVersion"
                 Write-Output "0. Salir"
                 $OPCION_CADDY = Read-Host -p "Eliga una opción"
-            
+
                 if ($OPCION_CADDY -notmatch "^\d+$") {
                     Write-Output "Debes ingresar un número."
+                } elseif (VerifyPortsReserved -port $PORT) {
+                    Write-Host "El puerto $PORT está reservado para un servicio ."
                 } else {
                     switch($OPCION_CADDY){
                         "1"{
                             $PORT = Read-Host "Ingresa el puerto donde se realizara la instalacion"
-            
+
                             if ($PORT -notmatch "^\d+$") {
                                 Write-Output "Debes ingresar un número."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
                                 Write-Output "Puerto invalido."
-                            } elseif (VerifyPortsReserved -port $PORT) {
-                                Write-Host "El puerto $PORT está reservado para un servicio."
-                            } elseif (-not (Es-PuertoValido -puerto $PORT)) {
+                            } elseif (-not (Es-PuertoValido -port $PORT)) {
                                 Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
