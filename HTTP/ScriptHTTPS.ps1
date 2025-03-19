@@ -89,9 +89,9 @@ while($true){
                 # Validar el puerto
                 if ($PORT -notmatch "^\d+$") {
                     Write-Output "Debes ingresar un numero."
-                } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
+                } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
                     Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                } elseif (VerifyPortsReserved -port $PORT) {
+                } elseif (Es-PuertoValido -port $PORT) {
                     Write-Host "El puerto $PORT está reservado para un servicio."
                 } else {
                     # Configurar el puerto en IIS
@@ -139,7 +139,7 @@ while($true){
                                 Write-Output "Debes ingresar un número."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
                                 Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (VerifyPortsReserved -port $PORT) {
+                            } elseif (Es-PuertoValido -port $PORT) {
                                 Write-Host "El puerto $PORT esta reservado para un servicio ."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
@@ -163,7 +163,7 @@ while($true){
                                 Write-Output "Debes ingresar un número."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
                                 Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            }  elseif (VerifyPortsReserved -port $PORT) {
+                            }  elseif (Es-PuertoValido -port $PORT) {
                                 Write-Host "El puerto $PORT esta reservado para un servicio ."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
@@ -207,7 +207,7 @@ while($true){
                                 Write-Output "Debes ingresar un numero."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
                                 Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (VerifyPortsReserved -port $PORT) {
+                            } elseif (Es-PuertoValido -port $PORT) {
                                 Write-Host "El puerto $PORT está reservado para un servicio ."
                             } else {
                                 Stop-Process -Name nginx -ErrorAction SilentlyContinue
@@ -227,7 +227,7 @@ while($true){
                                 Write-Output "Debes ingresar un numero."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65536) {
                                 Write-Output "Puerto no valido, debe estar entre 1 y 65535."
-                            } elseif (VerifyPortsReserved -port $PORT) {
+                            } elseif (Es-PuertoValido -port $PORT) {
                                 Write-Host "El puerto $PORT está reservado para un servicio ."
                             } else {
                                 Stop-Process -Name nginx -ErrorAction SilentlyContinue
