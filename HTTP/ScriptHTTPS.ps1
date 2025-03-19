@@ -28,35 +28,24 @@ function Test-PortInUse {
     return $connection
 }
 
-function Es-PuertoValido {
-    param (
-        [int]$puerto
-    )
-    $puertosReservados = @{
-        20 = "FTP"
-        21 = "FTP"
-        22 = "SSH"
-        23 = "Telnet"
-        25 = "SMTP"
-        53 = "DNS"
-        67 = "DHCP"
-        68 = "DHCP"
-        80 = "HTTP"
-        110 = "POP3"
-        119 = "NNTP"
-        123 = "NTP"
-        143 = "IMAP"
-        161 = "SNMP"
-        162 = "SNMP"
-        389 = "LDAP"
-        443 = "HTTPS"
-    }
-
-    if ($puertosReservados.ContainsKey($puerto)) {
-        Write-Host "El puerto $puerto está reservado para: $($puertosReservados[$puerto])"
-        return $false
-    }
-    return $true
+$global:puertosReservados = @{
+    20 = "FTP"
+    21 = "FTP"
+    22 = "SSH"
+    23 = "Telnet"
+    25 = "SMTP"
+    53 = "DNS"
+    67 = "DHCP"
+    68 = "DHCP"
+    80 = "HTTP"
+    110 = "POP3"
+    119 = "NNTP"
+    123 = "NTP"
+    143 = "IMAP"
+    161 = "SNMP"
+    162 = "SNMP"
+    389 = "LDAP"
+    443 = "HTTPS"
 }
 
 
@@ -65,10 +54,8 @@ function VerifyPortsReserved {
     param (
         [int]$port
     )
-
-    $puertoEncontrado = $puertosReservados | Where-Object { $_.Puerto -eq $port}
-
-    if ($puertoEncontrado) {
+    
+    if ($global:puertosReservados.ContainsKey($port)) {
         return $true
     } else {
         return $false
@@ -140,21 +127,21 @@ while($true){
                 Write-Output "2. Versión de desarrollo $devVersion"
                 Write-Output "0. Salir"
                 $OPCION_CADDY = Read-Host -p "Eliga una opción"
-
+            
                 if ($OPCION_CADDY -notmatch "^\d+$") {
                     Write-Output "Debes ingresar un número."
-                } elseif (VerifyPortsReserved -port $PORT) {
-                    Write-Host "El puerto $PORT está reservado para un servicio ."
                 } else {
                     switch($OPCION_CADDY){
                         "1"{
                             $PORT = Read-Host "Ingresa el puerto donde se realizara la instalacion"
-
+            
                             if ($PORT -notmatch "^\d+$") {
                                 Write-Output "Debes ingresar un número."
                             } elseif ($PORT -lt 1 -or $PORT -gt 65535) {
-                                Write-Output "Puerto inválido."
-                            } elseif (-not (Es-PuertoValido -port $PORT)) {
+                                Write-Output "Puerto invalido."
+                            } elseif (VerifyPortsReserved -port $PORT) {
+                                Write-Host "El puerto $PORT está reservado para un servicio."
+                            } elseif (-not (Es-PuertoValido -puerto $PORT)) {
                                 Write-Host "El puerto $PORT está reservado."
                             } else {
                                 Stop-Process -Name caddy -ErrorAction SilentlyContinue
