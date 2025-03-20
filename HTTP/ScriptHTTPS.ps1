@@ -28,24 +28,35 @@ function Test-PortInUse {
     return $connection
 }
 
-$global:puertosReservados = @{
-    20 = "FTP"
-    21 = "FTP"
-    22 = "SSH"
-    23 = "Telnet"
-    25 = "SMTP"
-    53 = "DNS"
-    67 = "DHCP"
-    68 = "DHCP"
-    80 = "HTTP"
-    110 = "POP3"
-    119 = "NNTP"
-    123 = "NTP"
-    143 = "IMAP"
-    161 = "SNMP"
-    162 = "SNMP"
-    389 = "LDAP"
-    443 = "HTTPS"
+function Es-PuertoValido {
+    param (
+        [int]$puerto
+    )
+    $puertosReservados = @{
+        20 = "FTP"
+        21 = "FTP"
+        22 = "SSH"
+        23 = "Telnet"
+        25 = "SMTP"
+        53 = "DNS"
+        67 = "DHCP"
+        68 = "DHCP"
+        80 = "HTTP"
+        110 = "POP3"
+        119 = "NNTP"
+        123 = "NTP"
+        143 = "IMAP"
+        161 = "SNMP"
+        162 = "SNMP"
+        389 = "LDAP"
+        443 = "HTTPS"
+    }
+
+    if ($puertosReservados.ContainsKey($puerto)) {
+        Write-Host "El puerto $puerto está reservado para: $($puertosReservados[$puerto])"
+        return $false
+    }
+    return $true
 }
 
 
@@ -54,8 +65,10 @@ function VerifyPortsReserved {
     param (
         [int]$port
     )
-    
-    if ($global:puertosReservados.ContainsKey($port)) {
+
+    $puertoEncontrado = $puertosReservados | Where-Object { $_.Puerto -eq $port}
+
+    if ($puertoEncontrado) {
         return $true
     } else {
         return $false
