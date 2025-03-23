@@ -1,6 +1,4 @@
 #!/bin/bash
-# funciones_http.sh
-# Script para funciones de gestión de instalación de servicios HTTP en Linux
 
 # Variable para determinar la fuente de descarga: "ftp" o "online" (por defecto)
 FUENTE_DESCARGA=${INSTALACION_FUENTE:-online}
@@ -2037,4 +2035,36 @@ obtener_versiones_lighttpd_stable() {
     local version=$(echo "$html" | grep -oP '<li><a href="[^"]*">[0-9]+\.[0-9]+\.[0-9]+' | sed 's/.*\">//' | head -n 2 | tail -n 1)
     echo "$version"
 }
+
+# --- Menú Principal ---
+while true; do
+    echo "==========================================="
+    echo " Menú de Instalación de Servidores Web"
+    echo "==========================================="
+    echo "1. Instalar Nginx"
+    echo "2. Instalar Tomcat"
+    echo "3. Instalar Lighttpd"
+    echo "4. Salir"
+    echo "==========================================="
+    read -p "Seleccione una opción (1-4): " opcion_principal
+
+    case "$opcion_principal" in
+        1)
+            instalar_servicio_http "nginx"
+            ;;
+        2)
+            instalar_servicio_http "tomcat"
+            ;;
+        3)
+            instalar_servicio_http "lighttpd"
+            ;;
+        4)
+            echo "Saliendo del script..."
+            exit 0
+            ;;
+        *)
+            echo "Opción no válida. Por favor, seleccione 1, 2, 3 o 4."
+            ;;
+    esac
+done
 
