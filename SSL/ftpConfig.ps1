@@ -5,7 +5,7 @@ function Configftp{
 
     #Write-Host "No se ha detectado el servidor ftp, procederemos a instalarlo y configurarlo"
 
-    . .\SistemasAdmin\SSL\ftpfunctions.ps1
+    . .\ftpfunctions.ps1
 
     InstallFtp
 

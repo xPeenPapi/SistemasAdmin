@@ -1,7 +1,7 @@
-﻿. .\SistemasAdmin\SSL\ftpConfig.ps1
-. .\SistemasAdmin\SSL\SSLfunctions.ps1
-. .\SistemasAdmin\SSL\httpconfig.ps1
-. .\SistemasAdmin\SSL\httpfunctions.ps1
+﻿. .\ftpConfig.ps1
+. .\SSLfunctions.ps1
+. .\httpconfig.ps1
+. .\httpfunctions.ps1
 
 #Descargamos openssl que se necesita para crear los arhcivos de los certificados para caddy y nginx
 choco install openssl -y

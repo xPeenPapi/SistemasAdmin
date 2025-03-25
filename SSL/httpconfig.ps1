@@ -1,6 +1,6 @@
 ﻿#Converti este script en una funcion para llamarlo desde el script del ssl
 function httpconfig{
-    . .\Desktop\SSL\httpfunctions.ps1
+    . .\httpfunctions.ps1
 
     Write-Host "Validando instalacion de los servicios de IIS"
     $running = $true
