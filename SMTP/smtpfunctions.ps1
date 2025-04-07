@@ -27,18 +27,18 @@
 }
 
 function instalarsquirrel{
-    Install-WindowsFeature -name Web-Server, Web-Common-Http, Web-Static-Content, Web-Default-Doc, Web-Dir-Browsing, Web-Http-Errors, Web-Http-Logging, Web-Request-Monitor, Web-Http-Redirect, Web-Filtering, Web-Performance, Web-Stat-Compression, Web-Security, Web-Mgmt-Console -IncludeManagementTools
+    #Install-WindowsFeature -name Web-Server, Web-Common-Http, Web-Static-Content, Web-Default-Doc, Web-Dir-Browsing, Web-Http-Errors, Web-Http-Logging, Web-Request-Monitor, Web-Http-Redirect, Web-Filtering, Web-Performance, Web-Stat-Compression, Web-Security, Web-Mgmt-Console -IncludeManagementTools
     
     #Descargamos Xammp
     Write-Host "Para ejecutar squirrelmail se necesita un servidor http que soporte php, se utilizará xampp para esto "
-    curl.exe -L "https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.14/xampp-portable-win32-5.6.14-4-VC11-installer.exe/download" -o "C:\Users\Administrador\Downloads\xampp-portable-win32-5.6.14-4-VC11-installer.exe"
-    Start-Process "C:\Users\Administrador\Downloads\xampp-portable-win32-5.6.14-4-VC11-installer.exe" -Wait
+    curl.exe -L "https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.14/xampp-portable-win32-5.6.14-4-VC11-installer.exe/download" -o "C:\Users\Administrator\Downloads\xampp-portable-win32-5.6.14-4-VC11-installer.exe"
+    Start-Process "C:\Users\Administrator\Downloads\xampp-portable-win32-5.6.14-4-VC11-installer.exe" -Wait
     
     #Descargamos squirrelmaul
     Write-Host "Descargando squirrelmail" 
-    curl.exe -L "https://sourceforge.net/projects/squirrelmail/files/stable/1.4.22/squirrelmail-webmail-1.4.22.zip/download?use_mirror=psychz" -o "C:\Users\Administrador\Downloads\squirrelmail.zip"
+    curl.exe -L "https://sourceforge.net/projects/squirrelmail/files/stable/1.4.22/squirrelmail-webmail-1.4.22.zip/download?use_mirror=psychz" -o "C:\Users\Administrator\Downloads\squirrelmail.zip"
 
-    Expand-Archive -Path "C:\Users\Administrador\Downloads\squirrelmail.zip" -DestinationPath "C:\xampp\htdocs\"
+    Expand-Archive -Path "C:\Users\Administrator\Downloads\squirrelmail.zip" -DestinationPath "C:\xampp\htdocs\"
     #Se renombra la carpeta descomprimida como squirrelmail
     Rename-Item -Path C:\xampp\htdocs\squirrelmail-webmail-1.4.22 -NewName "squirrelmail"
 

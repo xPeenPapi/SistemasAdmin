@@ -1,5 +1,5 @@
 ﻿#Ruta donde guardas los scripts
-. .\Desktop\NurvoSMTP\smtpfunctions.ps1
+. .\smtpfunctions.ps1
 
 
 
