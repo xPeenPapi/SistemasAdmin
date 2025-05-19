@@ -1,4 +1,4 @@
-﻿#Ruta donde guardas los scripts
+﻿
 . .\smtpfunctions.ps1
 
 

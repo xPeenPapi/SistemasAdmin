@@ -1,7 +1,6 @@
 #!/bin/bash
-# smtp.sh
 
-# Asegurar que el archivo de funciones está disponible
+
 source ./smtpfunctions.sh
 
 while true; do

@@ -1,6 +1,5 @@
 ﻿function Configurarini($lines, $section, $key, $value){
 
-    #Esto confugrua el archivo de configuracion, si alguien pregunra ehm... un hechicero lo hizo
     $sectionIndex = $lines.IndexOf("[$section]")
     if($sectionIndex -lt 0) {
         $lines += "[$section]", "$key=$value"
@@ -27,7 +26,6 @@
 }
 
 function instalarsquirrel{
-    #Install-WindowsFeature -name Web-Server, Web-Common-Http, Web-Static-Content, Web-Default-Doc, Web-Dir-Browsing, Web-Http-Errors, Web-Http-Logging, Web-Request-Monitor, Web-Http-Redirect, Web-Filtering, Web-Performance, Web-Stat-Compression, Web-Security, Web-Mgmt-Console -IncludeManagementTools
     
     #Descargamos Xammp
     Write-Host "Para ejecutar squirrelmail se necesita un servidor http que soporte php, se utilizará xampp para esto "
